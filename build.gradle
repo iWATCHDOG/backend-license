@@ -1,0 +1,80 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.2.0'
+    id 'io.spring.dependency-management' version '1.1.4'
+    id "maven-publish"
+}
+
+group = 'cn.watchdog'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    sourceCompatibility = '17'
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-test'
+    implementation 'org.apache.commons:commons-pool2'
+    implementation 'org.jetbrains:annotations:24.0.0'
+    compileOnly 'org.projectlombok:lombok'
+    runtimeOnly 'com.mysql:mysql-connector-j'
+    annotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    implementation 'com.google.guava:guava:32.1.1-jre'
+    implementation 'org.apache.commons:commons-lang3:3.12.0'
+    implementation 'com.baomidou:mybatis-plus-boot-starter:3.5.3.1'
+    implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8'
+    implementation 'org.springframework.boot:spring-boot-starter-mail:3.0.4'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf:3.0.4'
+    implementation 'org.apache.directory.studio:org.apache.commons.codec:1.8'
+    implementation 'org.aspectj:aspectjweaver:1.9.20.1'
+    implementation 'net.coobird:thumbnailator:0.4.20'
+    implementation 'io.github.karlatemp:unsafe-accessor:1.7.0'
+    implementation 'org.yaml:snakeyaml:2.2'
+}
+
+processResources {
+    def time = new Date().format('yyyy-MM-dd HH:mm:ss')
+    def props = [version: rootProject.version, time: time]
+    inputs.properties props
+    filteringCharset 'UTF-8'
+    filesMatching('version.yml') {
+        expand props
+    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId project.group
+            artifactId project.name
+            version project.version
+            from components.java
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+}
+
+javadoc {
+    options.encoding = "UTF-8"
+}
+

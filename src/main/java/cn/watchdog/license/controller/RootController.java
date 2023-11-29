@@ -18,4 +18,9 @@ public class RootController {
 	public ResponseEntity<BaseResponse<VersionUtil.Version>> getVersion(HttpServletRequest request) {
 		return ResultUtil.ok(VersionUtil.getVersion());
 	}
+
+	@GetMapping("/ping")
+	public ResponseEntity<BaseResponse<String>> test(HttpServletRequest request) {
+		return ResultUtil.ok("pong");
+	}
 }

@@ -11,7 +11,8 @@ public class ResultUtil {
 	 * 成功
 	 */
 	private static <T> BaseResponse<T> success(T data) {
-		return new BaseResponse<>(ReturnCode.SUCCESS.getCode(), data, "操作成功");
+		ReturnCode returnCode = ReturnCode.SUCCESS;
+		return new BaseResponse<>(returnCode.getCode(), data, returnCode.getMessage());
 	}
 
 	public static <T> ResponseEntity<BaseResponse<T>> ok(T data) {

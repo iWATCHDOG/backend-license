@@ -34,14 +34,13 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     implementation 'com.google.guava:guava:32.1.1-jre'
     implementation 'org.apache.commons:commons-lang3:3.12.0'
-    implementation 'com.baomidou:mybatis-plus-boot-starter:3.5.3.1'
+    implementation 'com.baomidou:mybatis-plus-boot-starter:3.5.4.1'
     implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8'
     implementation 'org.springframework.boot:spring-boot-starter-mail:3.0.4'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf:3.0.4'
     implementation 'org.apache.directory.studio:org.apache.commons.codec:1.8'
     implementation 'org.aspectj:aspectjweaver:1.9.20.1'
     implementation 'net.coobird:thumbnailator:0.4.20'
-    implementation 'io.github.karlatemp:unsafe-accessor:1.7.0'
     implementation 'org.yaml:snakeyaml:2.2'
 }
 

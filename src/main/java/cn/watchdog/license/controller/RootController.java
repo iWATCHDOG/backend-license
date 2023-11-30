@@ -20,7 +20,7 @@ public class RootController {
 	}
 
 	@GetMapping("/ping")
-	public ResponseEntity<BaseResponse<String>> test(HttpServletRequest request) {
+	public ResponseEntity<BaseResponse<String>> ping(HttpServletRequest request) {
 		return ResultUtil.ok("pong");
 	}
 }

@@ -15,7 +15,7 @@
         <Prudent>true</Prudent>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <FileNamePattern>
-                logs/%d{yyyy-MM-dd}/%d{yyyy-MM-dd}.log
+                logs/%d{yyyy-MM}/%d{yyyy-MM-dd-HHmmss}.log
             </FileNamePattern>
             <maxHistory>7</maxHistory>
         </rollingPolicy>

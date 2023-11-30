@@ -17,15 +17,15 @@ public enum UserStatus {
 	 */
 	DELETED(2);
 
-	private final int value;
+	final int code;
 
-	UserStatus(int value) {
-		this.value = value;
+	UserStatus(int code) {
+		this.code = code;
 	}
 
 	public static UserStatus valueOf(int value) {
 		for (UserStatus status : UserStatus.values()) {
-			if (status.value == value) {
+			if (status.code == value) {
 				return status;
 			}
 		}

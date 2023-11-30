@@ -12,3 +12,28 @@ CREATE TABLE IF NOT EXISTS `user`
     updateTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     available  BOOL     DEFAULT TRUE              NOT NULL COMMENT '是否可用'
 );
+
+-- 定义管理员权限为*，即所有权限
+
+CREATE TABLE IF NOT EXISTS `permission`
+(
+    id         BIGINT AUTO_INCREMENT              NOT NULL COMMENT 'id' PRIMARY KEY,
+    uid        BIGINT                             NOT NULL COMMENT 'uid',
+    permission VARCHAR(32)                        NOT NULL COMMENT '权限',
+    expiry     BIGINT   DEFAULT 0                 NOT NULL COMMENT '过期时间',
+    createTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
+    updateTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    available  BOOL     DEFAULT TRUE              NOT NULL COMMENT '是否可用'
+);
+
+CREATE TABLE IF NOT EXISTS `oauth`
+(
+    id         BIGINT AUTO_INCREMENT              NOT NULL COMMENT 'id' PRIMARY KEY,
+    uid        BIGINT                             NOT NULL COMMENT 'uid',
+    platform   INTEGER                            NOT NULL COMMENT '平台',
+    openId     VARCHAR(64)                        NOT NULL COMMENT 'openId',
+    token      VARCHAR(64)                        NOT NULL COMMENT 'token',
+    createTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
+    updateTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    available  BOOL     DEFAULT TRUE              NOT NULL COMMENT '是否可用'
+);

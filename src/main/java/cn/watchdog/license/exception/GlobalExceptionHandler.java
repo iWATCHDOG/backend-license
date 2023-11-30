@@ -20,7 +20,7 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<BaseResponse<Object>> businessExceptionHandler(BusinessException e) {
 		String requestId = UUID.randomUUID().toString();
 		log.error("businessException, id: {}, message: {}", requestId, e.getMessage(), e);
-		ResponseEntity<BaseResponse<Object>> ret = ResultUtil.failed(e.getCode(), e.getMessage(), 400);
+		ResponseEntity<BaseResponse<Object>> ret = ResultUtil.failed(e.getCode(), e.getMessage(), e.getStatus());
 		BaseResponse<Object> body = ret.getBody();
 		BaseResponse.RequestInfo requestInfo = new BaseResponse.RequestInfo();
 		requestInfo.setRequestId(requestId);

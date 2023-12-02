@@ -10,7 +10,7 @@ public class ResultUtil {
 	/**
 	 * 成功
 	 */
-	private static <T> BaseResponse<T> success(T data) {
+	public static <T> BaseResponse<T> success(T data) {
 		ReturnCode returnCode = ReturnCode.SUCCESS;
 		return new BaseResponse<>(returnCode.getCode(), data, returnCode.getMessage());
 	}

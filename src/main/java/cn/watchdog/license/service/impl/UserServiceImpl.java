@@ -20,11 +20,17 @@ import com.github.benmanes.caffeine.cache.Cache;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import net.coobird.thumbnailator.Thumbnails;
 import okhttp3.OkHttpClient;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -32,6 +38,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Objects;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -107,6 +114,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		if (!saveResult) {
 			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "添加失败，数据库错误");
 		}
+		generateDefaultAvatar(user);
 		return true;
 	}
 
@@ -128,9 +136,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		if (githubUser == null) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空");
 		}
-		if (checkIsLogin(request)) {
-			throw new BusinessException(ReturnCode.OPERATION_ERROR, "已登录");
-		}
 		OAuthPlatForm oAuthPlatForm = OAuthPlatForm.GITHUB;
 		String login = githubUser.getLogin();
 		long id = githubUser.getId();
@@ -140,6 +145,32 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		// 判断是否已经绑定过
 		QueryWrapper<OAuth> oAuthQueryWrapper = new QueryWrapper<>();
 		oAuthQueryWrapper.eq("platform", oAuthPlatForm.getCode());
+		if (checkIsLogin(request)) {
+			// bind
+			User user = getLoginUser(request);
+			oAuthQueryWrapper.eq("uid", user.getUid());
+			OAuth oAuth = oAuthMapper.selectOne(oAuthQueryWrapper);
+			if (oAuth != null) {
+				throw new BusinessException(ReturnCode.OPERATION_ERROR, "已绑定GitHub账号,请勿重复绑定");
+			}
+			QueryWrapper<OAuth> oAuthQueryWrapper1 = new QueryWrapper<>();
+			oAuthQueryWrapper1.eq("platform", oAuthPlatForm.getCode());
+			oAuthQueryWrapper1.eq("openId", id);
+			oAuth = oAuthMapper.selectOne(oAuthQueryWrapper1);
+			if (oAuth != null) {
+				throw new BusinessException(ReturnCode.OPERATION_ERROR, "该GitHub账号已绑定其他账号");
+			}
+			oAuth = new OAuth();
+			oAuth.setUid(user.getUid());
+			oAuth.setPlatform(oAuthPlatForm.getCode());
+			oAuth.setOpenId(String.valueOf(id));
+			oAuth.setToken(node_id);
+			boolean saveResult = oAuthMapper.insert(oAuth) > 0;
+			if (!saveResult) {
+				throw new BusinessException(ReturnCode.SYSTEM_ERROR, "添加失败，数据库错误");
+			}
+			return user;
+		}
 		oAuthQueryWrapper.eq("openId", id);
 		OAuth oAuth = oAuthMapper.selectOne(oAuthQueryWrapper);
 		if (oAuth != null) {
@@ -167,7 +198,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		// 绑定账户
 		oAuth = new OAuth();
 		oAuth.setUid(user.getUid());
-		oAuth.setPlatform(OAuthPlatForm.GITHUB.getCode());
+		oAuth.setPlatform(oAuthPlatForm.getCode());
 		oAuth.setOpenId(String.valueOf(id));
 		oAuth.setToken(node_id);
 		saveResult = oAuthMapper.insert(oAuth) > 0;
@@ -301,9 +332,97 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			Files.copy(inputStream, path, StandardCopyOption.REPLACE_EXISTING);
 			user.setAvatar(path.toString());
 			userMapper.updateById(user);
-			log.warn("download success");
 		} catch (IOException e) {
+			generateDefaultAvatar(user);
 			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to download avatar");
 		}
+	}
+
+	@Override
+	public void setupAvatar(User user, MultipartFile file) {
+		if (file == null || file.isEmpty()) {
+			throw new BusinessException(ReturnCode.FORBIDDEN_ERROR, "图片为空");
+		}
+		try {
+			// 获取图片的长度和宽度
+			BufferedImage fi = ImageIO.read(file.getInputStream());
+			ByteArrayOutputStream stream = new ByteArrayOutputStream();
+			Thumbnails.of(file.getInputStream()).size(460, 460).toOutputStream(stream);
+			// 获取图片类型拓展名
+			String ext = Objects.requireNonNull(file.getOriginalFilename()).substring(file.getOriginalFilename().lastIndexOf("."));
+			String fileName = "avatar." + ext;
+			Path path = Paths.get("avatars", String.valueOf(user.getUid()), fileName);
+			Files.createDirectories(path.getParent());
+			byte[] bytes = stream.toByteArray();
+			Files.write(path, bytes);
+			user.setAvatar(path.toString());
+			userMapper.updateById(user);
+		} catch (IOException e) {
+			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to upload avatar");
+		}
+	}
+
+	@Override
+	@Async
+	public void generateDefaultAvatar(User user) {
+		String username = user.getUsername();
+		Long uid = user.getUid();
+		String character = username.chars()
+				.mapToObj(c -> (char) c)
+				.filter(Character::isLetterOrDigit)
+				.findFirst()
+				.map(String::valueOf)
+				.orElse(String.valueOf(uid % 10));
+
+		int width = 460;
+		int height = 460;
+
+		BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		Graphics2D g = image.createGraphics();
+
+		Random random = new Random();
+		Color backgroundColor = new Color(random.nextInt(256), random.nextInt(256), random.nextInt(256));
+		g.setColor(backgroundColor);
+		g.fillRect(0, 0, width, height);
+
+		Color textColor = new Color(255 - backgroundColor.getRed(), 255 - backgroundColor.getGreen(), 255 - backgroundColor.getBlue());
+		g.setColor(textColor);
+		g.setFont(new Font("Arial", Font.BOLD, 200));
+		FontMetrics fm = g.getFontMetrics();
+		int x = (width - fm.stringWidth(character)) / 2;
+		int y = ((height - fm.getHeight()) / 2) + fm.getAscent();
+		g.drawString(character, x, y);
+
+		g.dispose();
+
+		try {
+			String fileName = "avatar.png";
+			Path path = Paths.get("avatars", String.valueOf(user.getUid()), fileName);
+			Files.createDirectories(path.getParent());
+			ImageIO.write(image, "png", path.toFile());
+			user.setAvatar(path.toString());
+			userMapper.updateById(user);
+		} catch (IOException e) {
+			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "Failed to generate avatar");
+		}
+	}
+
+	@Override
+	public void unbind(OAuthPlatForm oAuthPlatForm, HttpServletRequest request) {
+		if (oAuthPlatForm == null) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "Invalid code");
+		}
+		if (!checkIsLogin(request)) {
+			throw new BusinessException(ReturnCode.NOT_LOGIN_ERROR, "未登录");
+		}
+		User user = getLoginUser(request);
+		QueryWrapper<OAuth> oAuthQueryWrapper = new QueryWrapper<>();
+		oAuthQueryWrapper.eq("uid", user.getUid());
+		oAuthQueryWrapper.eq("platform", oAuthPlatForm.getCode());
+		OAuth oAuth = oAuthMapper.selectOne(oAuthQueryWrapper);
+		if (oAuth == null) {
+			throw new BusinessException(ReturnCode.OPERATION_ERROR, "未绑定该账号");
+		}
+		oAuthMapper.deleteById(oAuth.getId());
 	}
 }

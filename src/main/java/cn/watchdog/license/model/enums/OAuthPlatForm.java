@@ -26,7 +26,7 @@ public enum OAuthPlatForm {
 		this.code = code;
 	}
 
-	public static OAuthPlatForm of(int code) {
+	public static OAuthPlatForm valueOf(int code) {
 		for (OAuthPlatForm payPlatform : OAuthPlatForm.values()) {
 			if (payPlatform.code == code) {
 				return payPlatform;

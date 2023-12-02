@@ -4,6 +4,7 @@ import cn.watchdog.license.common.BaseResponse;
 import cn.watchdog.license.common.ResultUtil;
 import cn.watchdog.license.common.ReturnCode;
 import cn.watchdog.license.exception.BusinessException;
+import cn.watchdog.license.model.enums.OAuthPlatForm;
 import cn.watchdog.license.service.UserService;
 import cn.watchdog.license.util.oauth.GithubUser;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -18,6 +19,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -27,6 +30,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/oauth")
@@ -49,10 +53,33 @@ public class OAuthController {
 		return ResultUtil.ok(url);
 	}
 
-	@GetMapping("/github/callback")
-	public ResponseEntity<BaseResponse<GithubUser>> githubCallback(HttpServletRequest request, HttpServletResponse response) {
-		String code = request.getParameter("code");
+	@DeleteMapping("/unbind")
+	public ResponseEntity<BaseResponse<Boolean>> unbind(int code, HttpServletRequest request) {
+		OAuthPlatForm oAuthPlatForm = OAuthPlatForm.valueOf(code);
+		if (oAuthPlatForm == null) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "Invalid code");
+		}
+		userService.unbind(oAuthPlatForm, request);
+		return ResultUtil.ok(true);
+	}
 
+	@GetMapping("/github/callback")
+	public ResponseEntity<BaseResponse<String>> githubCallback(HttpServletRequest request, HttpServletResponse response) {
+		String code = request.getParameter("code");
+		fetchGithubUser(code).thenAccept(githubUser -> {
+			userService.oAuthLogin(githubUser, request);
+			// 重定向到前端页面
+			try {
+				response.sendRedirect(websiteUrl);
+			} catch (IOException e) {
+				throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to redirect to website");
+			}
+		});
+		return ResultUtil.ok("Request is being processed");
+	}
+
+	@Async
+	public CompletableFuture<GithubUser> fetchGithubUser(String code) {
 		RestTemplate restTemplate = new RestTemplate();
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
@@ -76,14 +103,9 @@ public class OAuthController {
 		ObjectMapper mapper = new ObjectMapper();
 		try {
 			GithubUser githubUser = mapper.readValue(userResponseEntity.getBody(), GithubUser.class);
-			userService.oAuthLogin(githubUser, request);
-			// 重定向到前端页面
-			response.sendRedirect(websiteUrl);
-			return ResultUtil.ok(githubUser);
+			return CompletableFuture.completedFuture(githubUser);
 		} catch (JsonProcessingException e) {
 			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to parse Github user info");
-		} catch (IOException e) {
-			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to redirect to website");
 		}
 	}
 

@@ -45,7 +45,7 @@ public class PasswordUtil {
 			salt.append(SALT_CHARS.charAt(random.nextInt(SALT_CHARS.length())));
 		}
 		String hash = getEncodeHash(password, salt.toString());
-		return String.format("%s$%s", salt.toString(), hash);
+		return String.format("%s$%s", salt, hash);
 	}
 
 	public static boolean checkPassword(String password, String hashedPassword) {

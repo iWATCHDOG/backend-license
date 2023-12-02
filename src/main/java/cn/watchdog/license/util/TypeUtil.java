@@ -70,12 +70,12 @@ public final class TypeUtil {
 		java.io.ByteArrayOutputStream m = new java.io.ByteArrayOutputStream();
 		java.io.PrintStream p = null;
 		try {
-			p = new java.io.PrintStream(m, true, "UTF8");
+			p = new java.io.PrintStream(m, true, StandardCharsets.UTF_8);
 		} catch (Throwable e2) {
 			throwException(e2);
 		}
 		e.printStackTrace(p);
-		return (e instanceof Error ? "§4" : "§e") + new String(m.toByteArray(), StandardCharsets.UTF_8).replace("\r",
+		return (e instanceof Error ? "§4" : "§e") + m.toString(StandardCharsets.UTF_8).replace("\r",
 						"")
 				.replace("\t",
 						"  ");

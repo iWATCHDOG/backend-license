@@ -317,9 +317,27 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		return username;
 	}
 
+	private void clearAvatar(User user) {
+		if (user == null) {
+			return;
+		}
+		String avatar = user.getAvatar();
+		if (StringUtils.isBlank(avatar)) {
+			return;
+		}
+		Path path = Paths.get(avatar);
+		try {
+			Files.deleteIfExists(path);
+		} catch (IOException e) {
+			log.error("Failed to delete avatar: {}", avatar);
+			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "Failed to delete avatar");
+		}
+	}
+
 	@Override
 	@Async
 	public void downloadAvatar(User user, String avatarUrl) {
+		clearAvatar(user);
 		try {
 			OkHttpClient client = new OkHttpClient();
 			okhttp3.Request req = new okhttp3.Request.Builder().url(avatarUrl).build();
@@ -340,6 +358,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
 	@Override
 	public void setupAvatar(User user, MultipartFile file) {
+		clearAvatar(user);
 		if (file == null || file.isEmpty()) {
 			throw new BusinessException(ReturnCode.FORBIDDEN_ERROR, "图片为空");
 		}
@@ -350,7 +369,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			Thumbnails.of(file.getInputStream()).size(460, 460).toOutputStream(stream);
 			// 获取图片类型拓展名
 			String ext = Objects.requireNonNull(file.getOriginalFilename()).substring(file.getOriginalFilename().lastIndexOf("."));
-			String fileName = "avatar." + ext;
+			String fileName = "avatar" + ext;
 			Path path = Paths.get("avatars", String.valueOf(user.getUid()), fileName);
 			Files.createDirectories(path.getParent());
 			byte[] bytes = stream.toByteArray();
@@ -365,6 +384,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 	@Override
 	@Async
 	public void generateDefaultAvatar(User user) {
+		clearAvatar(user);
 		String username = user.getUsername();
 		Long uid = user.getUid();
 		String character = username.chars()

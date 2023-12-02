@@ -2,22 +2,37 @@ package cn.watchdog.license.service.impl;
 
 import cn.watchdog.license.common.ReturnCode;
 import cn.watchdog.license.exception.BusinessException;
+import cn.watchdog.license.mapper.OAuthMapper;
 import cn.watchdog.license.mapper.UserMapper;
 import cn.watchdog.license.model.dto.UserCreateRequest;
 import cn.watchdog.license.model.dto.UserLoginRequest;
+import cn.watchdog.license.model.entity.OAuth;
 import cn.watchdog.license.model.entity.User;
+import cn.watchdog.license.model.enums.OAuthPlatForm;
 import cn.watchdog.license.service.UserService;
 import cn.watchdog.license.util.CaffeineFactory;
+import cn.watchdog.license.util.NumberUtil;
 import cn.watchdog.license.util.PasswordUtil;
+import cn.watchdog.license.util.oauth.GithubUser;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.github.benmanes.caffeine.cache.Cache;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.OkHttpClient;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static cn.watchdog.license.constant.UserConstant.*;
@@ -30,6 +45,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			.build();
 	@Resource
 	private UserMapper userMapper;
+	@Resource
+	private OAuthMapper oAuthMapper;
 
 	@Override
 	public boolean userCreate(UserCreateRequest userCreateRequest, HttpServletRequest request) {
@@ -107,6 +124,62 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 	}
 
 	@Override
+	public User oAuthLogin(GithubUser githubUser, HttpServletRequest request) {
+		if (githubUser == null) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空");
+		}
+		if (checkIsLogin(request)) {
+			throw new BusinessException(ReturnCode.OPERATION_ERROR, "已登录");
+		}
+		OAuthPlatForm oAuthPlatForm = OAuthPlatForm.GITHUB;
+		String login = githubUser.getLogin();
+		long id = githubUser.getId();
+		String node_id = githubUser.getNode_id();
+		String avatar_url = githubUser.getAvatar_url();
+		String email = githubUser.getEmail();
+		// 判断是否已经绑定过
+		QueryWrapper<OAuth> oAuthQueryWrapper = new QueryWrapper<>();
+		oAuthQueryWrapper.eq("platform", oAuthPlatForm.getCode());
+		oAuthQueryWrapper.eq("openId", id);
+		OAuth oAuth = oAuthMapper.selectOne(oAuthQueryWrapper);
+		if (oAuth != null) {
+			// 已经绑定过，直接登录
+			User user = userMapper.selectById(oAuth.getUid());
+			if (user == null) {
+				throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "账户信息不存在");
+			}
+			// 登录成功，设置登录态
+			request.getSession().setAttribute(USER_LOGIN_STATE, user);
+			return user;
+		}
+		// 未绑定，创建账户
+		User user = new User();
+		String username = generateUserName(login, oAuthPlatForm.name().toLowerCase());
+		user.setUsername(username);
+		UUID uuid = UUID.randomUUID();
+		user.setPassword(PasswordUtil.encodePassword(uuid.toString()));
+		user.setEmail(email);
+		boolean saveResult = this.save(user);
+		if (!saveResult) {
+			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "添加失败，数据库错误");
+		}
+		downloadAvatar(user, avatar_url);
+		// 绑定账户
+		oAuth = new OAuth();
+		oAuth.setUid(user.getUid());
+		oAuth.setPlatform(OAuthPlatForm.GITHUB.getCode());
+		oAuth.setOpenId(String.valueOf(id));
+		oAuth.setToken(node_id);
+		saveResult = oAuthMapper.insert(oAuth) > 0;
+		if (!saveResult) {
+			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "添加失败，数据库错误");
+		}
+		// 登录成功，设置登录态
+		request.getSession().setAttribute(USER_LOGIN_STATE, user);
+		return user;
+	}
+
+	@Override
 	public User userLogin(UserLoginRequest userLoginRequest, HttpServletRequest request) {
 		if (userLoginRequest == null) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空");
@@ -181,5 +254,56 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "账号重复");
 		}
 		return false;
+	}
+
+	@Override
+	public boolean checkDuplicatesIgnoreError(String userName) {
+		try {
+			return checkDuplicates(userName);
+		} catch (Exception e) {
+			return true;
+		}
+	}
+
+	@Override
+	public String generateUserName(String login, String prefix) {
+		String username;
+		if (checkDuplicatesIgnoreError(login)) {
+			do {
+				// 随机生成用户名
+				username = login + "_" + NumberUtil.getRandomCode(5);
+				// 判断随机后的用户名是否符合规范
+				if (!username.matches("^[a-zA-Z0-9_-]{1,16}$")) {
+					// 随机生成新的用户名,取UUID的前6位
+					UUID un = UUID.randomUUID();
+					username = prefix + "_" + un.toString().substring(0, 6);
+				}
+				// 判断是否重复
+			} while (checkDuplicatesIgnoreError(username));
+		} else {
+			username = login;
+		}
+		return username;
+	}
+
+	@Override
+	@Async
+	public void downloadAvatar(User user, String avatarUrl) {
+		try {
+			OkHttpClient client = new OkHttpClient();
+			okhttp3.Request req = new okhttp3.Request.Builder().url(avatarUrl).build();
+			okhttp3.Response res = client.newCall(req).execute();
+			InputStream inputStream = Objects.requireNonNull(res.body()).byteStream();
+			String ext = Objects.requireNonNull(res.body().contentType()).subtype();
+			String fileName = "avatar." + ext;
+			Path path = Paths.get("avatars", String.valueOf(user.getUid()), fileName);
+			Files.createDirectories(path.getParent());
+			Files.copy(inputStream, path, StandardCopyOption.REPLACE_EXISTING);
+			user.setAvatar(path.toString());
+			userMapper.updateById(user);
+			log.warn("download success");
+		} catch (IOException e) {
+			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to download avatar");
+		}
 	}
 }

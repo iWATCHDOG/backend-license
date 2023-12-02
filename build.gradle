@@ -49,6 +49,7 @@ dependencies {
     implementation 'com.aliyun:aliyun-java-sdk-dysmsapi:2.2.1'
     implementation 'io.github.karlatemp:unsafe-accessor:1.7.0'
     implementation 'org.yaml:snakeyaml:2.2'
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
 }
 
 processResources {

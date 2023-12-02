@@ -4,16 +4,26 @@ import lombok.Getter;
 
 @Getter
 public enum OAuthPlatForm {
-	WECHAT(1, "微信"),
-	QQ(2, "QQ"),
-	GITHUB(3, "GitHub"),
-	ALIPAY(4, "支付宝");
+	/**
+	 * 微信
+	 */
+	WECHAT(1),
+	/**
+	 * QQ
+	 */
+	QQ(2),
+	/**
+	 * GitHub
+	 */
+	GITHUB(3),
+	/**
+	 * 支付宝
+	 */
+	ALIPAY(4);
 	final int code;
-	final String desc;
 
-	OAuthPlatForm(int code, String desc) {
+	OAuthPlatForm(int code) {
 		this.code = code;
-		this.desc = desc;
 	}
 
 	public static OAuthPlatForm of(int code) {

@@ -11,7 +11,7 @@ import java.io.Serial;
 import java.io.Serializable;
 import java.util.Date;
 
-@TableName(value = "auth")
+@TableName(value = "oauth")
 @Data
 public class OAuth implements Serializable {
 	@Serial
@@ -23,6 +23,7 @@ public class OAuth implements Serializable {
 	@TableId(type = IdType.AUTO)
 	private Long id;
 	private Long uid;
+	private Integer platform;
 	private String openId;
 	private String token;
 	private Date createTime;

@@ -4,10 +4,13 @@ import cn.watchdog.license.common.BaseResponse;
 import cn.watchdog.license.common.ResultUtil;
 import cn.watchdog.license.common.ReturnCode;
 import cn.watchdog.license.exception.BusinessException;
+import cn.watchdog.license.service.UserService;
 import cn.watchdog.license.util.oauth.GithubUser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -20,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -34,6 +38,10 @@ public class OAuthController {
 	private String githubRedirectUri;
 	@Value("${oauth.github.client-secret}")
 	private String githubClientSecret;
+	@Value("${website.url}")
+	private String websiteUrl;
+	@Resource
+	private UserService userService;
 
 	@GetMapping("/github")
 	public ResponseEntity<BaseResponse<String>> github(HttpServletRequest request) {
@@ -42,7 +50,7 @@ public class OAuthController {
 	}
 
 	@GetMapping("/github/callback")
-	public ResponseEntity<BaseResponse<GithubUser>> githubCallback(HttpServletRequest request) {
+	public ResponseEntity<BaseResponse<GithubUser>> githubCallback(HttpServletRequest request, HttpServletResponse response) {
 		String code = request.getParameter("code");
 
 		RestTemplate restTemplate = new RestTemplate();
@@ -68,9 +76,14 @@ public class OAuthController {
 		ObjectMapper mapper = new ObjectMapper();
 		try {
 			GithubUser githubUser = mapper.readValue(userResponseEntity.getBody(), GithubUser.class);
+			userService.oAuthLogin(githubUser, request);
+			// 重定向到前端页面
+			response.sendRedirect(websiteUrl);
 			return ResultUtil.ok(githubUser);
 		} catch (JsonProcessingException e) {
 			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to parse Github user info");
+		} catch (IOException e) {
+			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to redirect to website");
 		}
 	}
 

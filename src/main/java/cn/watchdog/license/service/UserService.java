@@ -13,6 +13,8 @@ import org.springframework.web.multipart.MultipartFile;
 public interface UserService extends IService<User> {
 	boolean userCreate(UserCreateRequest userCreateRequest, HttpServletRequest request);
 
+	boolean userAdd(User user, HttpServletRequest request);
+
 	boolean userLogout(HttpServletRequest request);
 
 	User oAuthLogin(GithubUser githubUser, HttpServletRequest request);

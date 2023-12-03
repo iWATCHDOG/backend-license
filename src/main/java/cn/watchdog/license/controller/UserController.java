@@ -111,4 +111,16 @@ public class UserController {
 			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "预览系统异常");
 		}
 	}
+
+	/**
+	 * 获取用户名
+	 */
+	@GetMapping("/get/username/{uid}")
+	public ResponseEntity<BaseResponse<String>> getUsername(@PathVariable("uid") Long uid) {
+		User user = userService.getById(uid);
+		if (user == null) {
+			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "用户不存在");
+		}
+		return ResultUtil.ok(user.getUsername());
+	}
 }

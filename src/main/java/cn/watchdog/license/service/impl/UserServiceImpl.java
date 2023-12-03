@@ -56,26 +56,51 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 	private OAuthMapper oAuthMapper;
 
 	@Override
+	public boolean userAdd(User user, HttpServletRequest request) {
+		if (user == null) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空");
+		}
+		String userName = user.getUsername();
+		String userPassword = user.getPassword();
+		validateUserCredentials(userName, userPassword);
+		String email = user.getEmail();
+		String phone = user.getPhone();
+		// 邮箱和手机号不能同时为空
+		if (StringUtils.isAllBlank(email, phone)) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "邮箱和手机号不能同时为空");
+		}
+		user.setPassword(PasswordUtil.encodePassword(userPassword));
+		if (!StringUtils.isAnyBlank(email)) {
+			// 邮箱注册
+			// 检查邮箱格式
+			if (!email.matches("^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+$")) {
+				throw new BusinessException(ReturnCode.PARAMS_ERROR, "邮箱格式错误");
+			}
+		}
+		if (!StringUtils.isAnyBlank(phone)) {
+			// 手机号注册
+			// 检查是否为中国大陆地区的手机号格式
+			if (!phone.matches("^1[3-9]\\d{9}$")) {
+				throw new BusinessException(ReturnCode.PARAMS_ERROR, "手机号格式错误");
+			}
+		}
+		boolean saveResult = this.save(user);
+		if (!saveResult) {
+			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "添加失败，数据库错误");
+		}
+		generateDefaultAvatar(user);
+		return true;
+	}
+
+
+	@Override
 	public boolean userCreate(UserCreateRequest userCreateRequest, HttpServletRequest request) {
 		if (userCreateRequest == null) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空");
 		}
 		String userName = userCreateRequest.getUsername();
 		String userPassword = userCreateRequest.getPassword();
-		if (StringUtils.isAnyBlank(userName, userPassword)) {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空");
-		}
-		if (checkDuplicates(userName)) {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, "账号重复");
-		}
-		// userName只能存在英文、数字、下划线、横杠、点，并且长度小于16
-		if (!userName.matches("^[a-zA-Z0-9_-]{1,16}$")) {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, "账号格式错误");
-		}
-		// 检查密码不过分简单。大小写字母、数字、特殊符号中至少包含两个，且长度大于8小于30。
-		if (!userCreateRequest.getPassword().matches("^(?![a-zA-Z]+$)(?![A-Z0-9]+$)(?![A-Z\\W_]+$)(?![a-z0-9]+$)(?![a-z\\W_]+$)(?![0-9\\W_]+$)[a-zA-Z0-9\\W_]{8,30}$")) {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, "密码格式错误");
-		}
+		validateUserCredentials(userName, userPassword);
 		String email = userCreateRequest.getEmail();
 		String phone = userCreateRequest.getPhone();
 		String code = userCreateRequest.getCode();
@@ -85,7 +110,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		}
 		User user = new User();
 		user.setUsername(userName);
-		user.setPassword(PasswordUtil.encodePassword(userCreateRequest.getPassword()));
+		user.setPassword(PasswordUtil.encodePassword(userPassword));
 		if (!StringUtils.isAnyBlank(email)) {
 			// 邮箱注册
 			// 检查邮箱格式
@@ -116,6 +141,23 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		}
 		generateDefaultAvatar(user);
 		return true;
+	}
+
+	private void validateUserCredentials(String userName, String userPassword) {
+		if (StringUtils.isAnyBlank(userName, userPassword)) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空");
+		}
+		if (checkDuplicates(userName)) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "账号重复");
+		}
+		// userName只能存在英文、数字、下划线、横杠、点，并且长度小于16
+		if (!userName.matches("^[a-zA-Z0-9_-]{1,16}$")) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "账号格式错误");
+		}
+		// 检查密码不过分简单。大小写字母、数字、特殊符号中至少包含两个，且长度大于8小于30。
+		if (!userPassword.matches("^(?![a-zA-Z]+$)(?![A-Z0-9]+$)(?![A-Z\\W_]+$)(?![a-z0-9]+$)(?![a-z\\W_]+$)(?![0-9\\W_]+$)[a-zA-Z0-9\\W_]{8,30}$")) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "密码格式错误");
+		}
 	}
 
 	/**

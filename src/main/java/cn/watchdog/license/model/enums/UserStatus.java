@@ -11,7 +11,7 @@ public enum UserStatus {
 	/**
 	 * 禁用
 	 */
-	DISABLED(1),
+	BANNED(1),
 	/**
 	 * 删除
 	 */
@@ -29,6 +29,6 @@ public enum UserStatus {
 				return status;
 			}
 		}
-		return NORMAL;
+		return BANNED;
 	}
 }

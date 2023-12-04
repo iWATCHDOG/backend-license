@@ -38,4 +38,6 @@ public interface UserService extends IService<User> {
 	void generateDefaultAvatar(User user);
 
 	void unbind(OAuthPlatForm oAuthPlatForm, HttpServletRequest request);
+
+	boolean checkStatus(User user);
 }

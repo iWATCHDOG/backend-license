@@ -10,9 +10,11 @@ import cn.watchdog.license.model.dto.PermissionAddRequest;
 import cn.watchdog.license.model.dto.PermissionRemoveRequest;
 import cn.watchdog.license.model.dto.UserQueryRequest;
 import cn.watchdog.license.model.entity.User;
+import cn.watchdog.license.model.enums.UserStatus;
 import cn.watchdog.license.model.vo.UserVO;
 import cn.watchdog.license.service.PermissionService;
 import cn.watchdog.license.service.UserService;
+import cn.watchdog.license.util.PasswordUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.plugins.pagination.PageDTO;
@@ -24,6 +26,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -50,6 +53,51 @@ public class AdminController {
 		return ResultUtil.ok(userService.userAdd(user, request));
 	}
 
+	/**
+	 * 重置用户密码
+	 */
+	@PostMapping("/user/reset/password/{uid}")
+	@AuthCheck(must = "*")
+	public ResponseEntity<BaseResponse<Boolean>> resetPassword(@PathVariable("uid") Long uid, String password, HttpServletRequest request) {
+		User user = userService.getById(uid);
+		if (user == null) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "用户不存在");
+		}
+		String encodePassword = PasswordUtil.encodePassword(password);
+		user.setPassword(encodePassword);
+		userService.updateById(user);
+		return ResultUtil.ok(true);
+	}
+
+	/**
+	 * 删除用户
+	 */
+	@DeleteMapping("/user/remove/{uid}")
+	@AuthCheck(must = "*")
+	public ResponseEntity<BaseResponse<Boolean>> userRemove(@PathVariable("uid") Long uid, HttpServletRequest request) {
+		User user = userService.getById(uid);
+		if (user == null) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "用户不存在");
+		}
+		userService.removeById(uid);
+		return ResultUtil.ok(true);
+	}
+
+	/**
+	 * 设置当前用户状态
+	 */
+	@PostMapping("/user/set/status/{uid}")
+	@AuthCheck(must = "*")
+	public ResponseEntity<BaseResponse<Boolean>> userSetStatus(@PathVariable("uid") Long uid, Integer status, HttpServletRequest request) {
+		User user = userService.getById(uid);
+		if (user == null) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "用户不存在");
+		}
+		UserStatus userStatus = UserStatus.valueOf(status);
+		user.setStatus(userStatus.getCode());
+		userService.updateById(user);
+		return ResultUtil.ok(true);
+	}
 
 	/**
 	 * 分页获取用户列表

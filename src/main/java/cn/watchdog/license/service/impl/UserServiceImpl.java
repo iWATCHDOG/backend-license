@@ -9,6 +9,7 @@ import cn.watchdog.license.model.dto.UserLoginRequest;
 import cn.watchdog.license.model.entity.OAuth;
 import cn.watchdog.license.model.entity.User;
 import cn.watchdog.license.model.enums.OAuthPlatForm;
+import cn.watchdog.license.model.enums.UserStatus;
 import cn.watchdog.license.service.UserService;
 import cn.watchdog.license.util.CaffeineFactory;
 import cn.watchdog.license.util.NumberUtil;
@@ -221,6 +222,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			if (user == null) {
 				throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "账户信息不存在");
 			}
+			checkStatus(user);
 			// 登录成功，设置登录态
 			request.getSession().setAttribute(USER_LOGIN_STATE, user);
 			return user;
@@ -280,6 +282,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		if (!PasswordUtil.checkPassword(password, user.getPassword())) {
 			throw new BusinessException(ReturnCode.VALIDATION_FAILED, "密码错误");
 		}
+		checkStatus(user);
 		// 登录成功，设置登录态
 		request.getSession().setAttribute(USER_LOGIN_STATE, user);
 		return user;
@@ -312,7 +315,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		if (currentUser == null || !currentUser.getPassword().equals(oldPass)) {
 			throw new BusinessException(ReturnCode.NOT_LOGIN_ERROR, "未登录");
 		}
-
+		checkStatus(currentUser);
 		request.getSession().setAttribute(USER_LOGIN_STATE, currentUser);
 		return currentUser;
 	}
@@ -486,5 +489,27 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			throw new BusinessException(ReturnCode.OPERATION_ERROR, "未绑定该账号");
 		}
 		oAuthMapper.deleteById(oAuth.getId());
+	}
+
+	@Override
+	public boolean checkStatus(User user) {
+		if (user == null) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空");
+		}
+		if (user.getStatus() == null) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空");
+		}
+		int status = user.getStatus();
+		UserStatus userStatus = UserStatus.valueOf(status);
+		if (userStatus == null) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空");
+		}
+		if (userStatus == UserStatus.DELETED) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "账户已删除");
+		}
+		if (userStatus == UserStatus.BANNED) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "账户已禁用");
+		}
+		return true;
 	}
 }

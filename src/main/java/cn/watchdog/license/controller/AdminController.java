@@ -6,9 +6,12 @@ import cn.watchdog.license.common.ResultUtil;
 import cn.watchdog.license.common.ReturnCode;
 import cn.watchdog.license.constant.CommonConstant;
 import cn.watchdog.license.exception.BusinessException;
+import cn.watchdog.license.model.dto.PermissionAddRequest;
+import cn.watchdog.license.model.dto.PermissionRemoveRequest;
 import cn.watchdog.license.model.dto.UserQueryRequest;
 import cn.watchdog.license.model.entity.User;
 import cn.watchdog.license.model.vo.UserVO;
+import cn.watchdog.license.service.PermissionService;
 import cn.watchdog.license.service.UserService;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -19,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,6 +37,8 @@ import java.util.stream.Collectors;
 public class AdminController {
 	@Resource
 	private UserService userService;
+	@Resource
+	private PermissionService permissionService;
 
 	@PostMapping("/user/add")
 	@AuthCheck(must = "*")
@@ -91,4 +97,23 @@ public class AdminController {
 		return ResultUtil.ok(userVOPage);
 	}
 
+	/**
+	 * 增加权限
+	 */
+	@PostMapping("/permission/add")
+	@AuthCheck(must = "*")
+	public ResponseEntity<BaseResponse<Boolean>> addPermission(PermissionAddRequest permissionAddRequest, HttpServletRequest request) {
+		permissionService.addPermission(permissionAddRequest);
+		return ResultUtil.ok(true);
+	}
+
+	/**
+	 * 删除权限
+	 */
+	@DeleteMapping("/permission/remove")
+	@AuthCheck(must = "*")
+	public ResponseEntity<BaseResponse<Boolean>> removePermission(PermissionRemoveRequest permissionRemoveRequest, HttpServletRequest request) {
+		permissionService.removePermission(permissionRemoveRequest);
+		return ResultUtil.ok(true);
+	}
 }

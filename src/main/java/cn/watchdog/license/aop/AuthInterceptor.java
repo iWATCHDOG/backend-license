@@ -56,7 +56,7 @@ public class AuthInterceptor {
 
 		// 必须有所有权限才通过
 		if (CollectionUtils.isNotEmpty(must)) {
-			if (!must.stream().allMatch(per -> permissionService.checkPermission(uid, per))) {
+			if (must.stream().anyMatch(per -> !permissionService.checkPermission(uid, per))) {
 				throw new BusinessException(ReturnCode.FORBIDDEN_ERROR, "无权限");
 			}
 		}

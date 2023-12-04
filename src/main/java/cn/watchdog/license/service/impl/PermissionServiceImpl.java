@@ -3,6 +3,8 @@ package cn.watchdog.license.service.impl;
 import cn.watchdog.license.common.ReturnCode;
 import cn.watchdog.license.exception.BusinessException;
 import cn.watchdog.license.mapper.PermissionMapper;
+import cn.watchdog.license.model.dto.PermissionAddRequest;
+import cn.watchdog.license.model.dto.PermissionRemoveRequest;
 import cn.watchdog.license.model.entity.Permission;
 import cn.watchdog.license.model.enums.Group;
 import cn.watchdog.license.service.PermissionService;
@@ -94,6 +96,11 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 	}
 
 	@Override
+	public void addPermission(PermissionAddRequest permissionAddRequest) {
+		addPermission(permissionAddRequest.getUid(), permissionAddRequest.getPermission(), permissionAddRequest.getExpiry());
+	}
+
+	@Override
 	public void removePermission(long uid, String permission) {
 		userPermissions.invalidate(uid);
 		Permission permissionQuery = getPermission(uid, permission);
@@ -101,6 +108,11 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 			permissionMapper.deleteById(permissionQuery.getId());
 		}
 		userPermissions.invalidate(uid);
+	}
+
+	@Override
+	public void removePermission(PermissionRemoveRequest permissionRemoveRequest) {
+		removePermission(permissionRemoveRequest.getUid(), permissionRemoveRequest.getPermission());
 	}
 
 	@Override
@@ -122,10 +134,10 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 			if (permission.getExpiry() == 0 || permission.getExpiry() > System.currentTimeMillis()) {
 				if (permission.getPermission().startsWith("group.")) {
 					groups.add(permission);
-				} else {
-					this.removeById(permission.getId());
-					userPermissions.invalidate(uid);
 				}
+			} else {
+				this.removeById(permission.getId());
+				userPermissions.invalidate(uid);
 			}
 		}
 		return groups;
@@ -157,6 +169,8 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 				Group g = Group.valueOf(group.getPermission().substring(6).toUpperCase());
 				if (g.getPriority() > maxPriorityGroup.getPriority()) {
 					maxPriorityGroup = g;
+					i = group;
+				} else if (g == Group.DEFAULT) {
 					i = group;
 				}
 			} catch (IllegalArgumentException ignored) {

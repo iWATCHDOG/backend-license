@@ -8,8 +8,10 @@ import cn.watchdog.license.common.StatusCode;
 import cn.watchdog.license.exception.BusinessException;
 import cn.watchdog.license.model.dto.UserCreateRequest;
 import cn.watchdog.license.model.dto.UserLoginRequest;
+import cn.watchdog.license.model.entity.Permission;
 import cn.watchdog.license.model.entity.User;
 import cn.watchdog.license.model.vo.UserVO;
+import cn.watchdog.license.service.PermissionService;
 import cn.watchdog.license.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,6 +31,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.util.List;
 
 @RestController
 @RequestMapping("/user")
@@ -36,6 +39,8 @@ import java.nio.file.Files;
 public class UserController {
 	@Resource
 	private UserService userService;
+	@Resource
+	private PermissionService permissionService;
 
 	@PostMapping("/create")
 	public ResponseEntity<BaseResponse<Boolean>> userCreate(UserCreateRequest userCreateRequest, HttpServletRequest request) {
@@ -122,5 +127,29 @@ public class UserController {
 			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "用户不存在");
 		}
 		return ResultUtil.ok(user.getUsername());
+	}
+
+	/**
+	 * 获取用户组列表
+	 */
+	@GetMapping("/get/group")
+	@AuthCheck()
+	public ResponseEntity<BaseResponse<List<Permission>>> getUserGroup(HttpServletRequest request) {
+		User user = userService.getLoginUser(request);
+		long uid = user.getUid();
+		List<Permission> ret = permissionService.getGroups(uid);
+		return ResultUtil.ok(ret);
+	}
+
+	/**
+	 * 获取最高权限的用户组
+	 */
+	@GetMapping("/get/group/max")
+	@AuthCheck()
+	public ResponseEntity<BaseResponse<Permission>> getMaxPriorityGroup(HttpServletRequest request) {
+		User user = userService.getLoginUser(request);
+		long uid = user.getUid();
+		Permission ret = permissionService.getMaxPriorityGroupP(uid);
+		return ResultUtil.ok(ret);
 	}
 }

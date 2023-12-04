@@ -40,6 +40,10 @@ public enum ReturnCode {
 	 */
 	FORBIDDEN_ERROR(40300, "Forbidden Access", StatusCode.FORBIDDEN),
 	/**
+	 * 请求次数过多
+	 */
+	TOO_MANY_REQUESTS_ERROR(42900, "Too many requests", StatusCode.TOO_MANY_REQUESTS),
+	/**
 	 * 系统内部异常
 	 */
 	SYSTEM_ERROR(50000, "System internal exception", StatusCode.INTERNAL_SERVER_ERROR),

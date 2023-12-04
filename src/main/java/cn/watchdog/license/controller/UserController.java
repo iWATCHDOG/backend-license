@@ -97,12 +97,12 @@ public class UserController {
 	public ResponseEntity<InputStreamResource> getAvatar(@PathVariable("uid") Long uid) {
 		User user = userService.getById(uid);
 		if (user == null) {
-			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "用户不存在");
+			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "用户不存在", uid);
 		}
 		File file = new File(user.getAvatar());
 		if (!file.exists()) {
 			userService.generateDefaultAvatar(user);
-			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "头像文件不存在");
+			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "头像文件不存在", uid);
 		}
 		try {
 			InputStream is = new FileInputStream(file);
@@ -124,7 +124,7 @@ public class UserController {
 	public ResponseEntity<BaseResponse<String>> getUsername(@PathVariable("uid") Long uid) {
 		User user = userService.getById(uid);
 		if (user == null) {
-			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "用户不存在");
+			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "用户不存在", uid);
 		}
 		return ResultUtil.ok(user.getUsername());
 	}

@@ -49,6 +49,9 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 	public boolean checkPermission(long uid, String permission) {
 		Set<Permission> permissions = getUserPermissions(uid);
 		for (Permission p : permissions) {
+			if (p.getPermission().isBlank()) {
+				return true;
+			}
 			if (p.getPermission().equals("*")) {
 				return true;
 			}

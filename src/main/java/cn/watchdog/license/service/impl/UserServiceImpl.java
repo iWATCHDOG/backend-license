@@ -48,9 +48,7 @@ import static cn.watchdog.license.constant.UserConstant.*;
 @Service
 @Slf4j
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
-	private static final Cache<String, String> emailCode = CaffeineFactory.newBuilder()
-			.expireAfterWrite(10, TimeUnit.MINUTES)
-			.build();
+	private static final Cache<String, String> emailCode = CaffeineFactory.newBuilder().expireAfterWrite(10, TimeUnit.MINUTES).build();
 	@Resource
 	private UserMapper userMapper;
 	@Resource
@@ -116,7 +114,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			// 邮箱注册
 			// 检查邮箱格式
 			if (!email.matches("^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+$")) {
-				throw new BusinessException(ReturnCode.PARAMS_ERROR, "邮箱格式错误");
+				throw new BusinessException(ReturnCode.PARAMS_ERROR, "邮箱格式错误", email);
 			}
 			// 检查邮箱验证码
 			if (StringUtils.isBlank(code)) {
@@ -124,7 +122,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			}
 			String emailCodeCache = emailCode.getIfPresent(email);
 			if (emailCodeCache == null || !emailCodeCache.equals(code)) {
-				throw new BusinessException(ReturnCode.PARAMS_ERROR, "邮箱验证码错误");
+				throw new BusinessException(ReturnCode.PARAMS_ERROR, "邮箱验证码错误", code);
 			}
 			user.setEmail(email);
 			emailCode.invalidate(email);
@@ -132,7 +130,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			// 手机号注册
 			// 检查是否为中国大陆地区的手机号格式
 			if (!phone.matches("^1[3-9]\\d{9}$")) {
-				throw new BusinessException(ReturnCode.PARAMS_ERROR, "手机号格式错误");
+				throw new BusinessException(ReturnCode.PARAMS_ERROR, "手机号格式错误", phone);
 			}
 			user.setPhone(phone);
 		}
@@ -149,15 +147,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空");
 		}
 		if (checkDuplicates(userName)) {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, "账号重复");
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "账号重复", userName);
 		}
 		// userName只能存在英文、数字、下划线、横杠、点，并且长度小于16
 		if (!userName.matches("^[a-zA-Z0-9_-]{1,16}$")) {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, "账号格式错误");
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "账号格式错误", userName);
 		}
 		// 检查密码不过分简单。大小写字母、数字、特殊符号中至少包含两个，且长度大于8小于30。
 		if (!userPassword.matches("^(?![a-zA-Z]+$)(?![A-Z0-9]+$)(?![A-Z\\W_]+$)(?![a-z0-9]+$)(?![a-z\\W_]+$)(?![0-9\\W_]+$)[a-zA-Z0-9\\W_]{8,30}$")) {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, "密码格式错误");
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "密码格式错误", userPassword);
 		}
 	}
 
@@ -327,7 +325,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		queryWrapper.eq("username", userName);
 		long count = userMapper.selectCount(queryWrapper);
 		if (count > 0) {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, "账号重复");
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "账号重复", userName);
 		}
 		return false;
 	}
@@ -397,7 +395,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			userMapper.updateById(user);
 		} catch (IOException e) {
 			generateDefaultAvatar(user);
-			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to download avatar");
+			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to download avatar", avatarUrl);
 		}
 	}
 
@@ -432,12 +430,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		clearAvatar(user);
 		String username = user.getUsername();
 		Long uid = user.getUid();
-		String character = username.chars()
-				.mapToObj(c -> (char) c)
-				.filter(Character::isLetterOrDigit)
-				.findFirst()
-				.map(String::valueOf)
-				.orElse(String.valueOf(uid % 10));
+		String character = username.chars().mapToObj(c -> (char) c).filter(Character::isLetterOrDigit).findFirst().map(String::valueOf).orElse(String.valueOf(uid % 10));
 
 		int width = 460;
 		int height = 460;
@@ -502,13 +495,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		int status = user.getStatus();
 		UserStatus userStatus = UserStatus.valueOf(status);
 		if (userStatus == null) {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空");
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空", status);
 		}
 		if (userStatus == UserStatus.DELETED) {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, "账户已删除");
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "账户已删除", status);
 		}
 		if (userStatus == UserStatus.BANNED) {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, "账户已禁用");
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "账户已禁用", status);
 		}
 		return true;
 	}

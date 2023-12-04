@@ -101,11 +101,12 @@ public class OAuthController {
 		ResponseEntity<String> userResponseEntity = restTemplate.exchange("https://api.github.com/user", HttpMethod.GET, userEntity, String.class);
 
 		ObjectMapper mapper = new ObjectMapper();
+		String json = userResponseEntity.getBody();
 		try {
-			GithubUser githubUser = mapper.readValue(userResponseEntity.getBody(), GithubUser.class);
+			GithubUser githubUser = mapper.readValue(json, GithubUser.class);
 			return CompletableFuture.completedFuture(githubUser);
 		} catch (JsonProcessingException e) {
-			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to parse Github user info");
+			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to parse Github user info", userResponseEntity);
 		}
 	}
 

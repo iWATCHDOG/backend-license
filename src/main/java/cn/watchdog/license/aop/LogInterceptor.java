@@ -52,8 +52,8 @@ public class LogInterceptor {
 		log.info("request end, id: {}, cost: {}ms", requestId, totalTimeMillis);
 		try {
 			if (result instanceof ResponseEntity) {
-				ResponseEntity<BaseResponse> responseEntity = (ResponseEntity<BaseResponse>) result;
-				BaseResponse baseResponse = responseEntity.getBody();
+				ResponseEntity<BaseResponse<Object>> responseEntity = (ResponseEntity<BaseResponse<Object>>) result;
+				BaseResponse<Object> baseResponse = responseEntity.getBody();
 				if (baseResponse != null) {
 					BaseResponse.RequestInfo requestInfo = new BaseResponse.RequestInfo();
 					requestInfo.setRequestId(requestId);

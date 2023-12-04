@@ -61,7 +61,7 @@ public class AdminController {
 	public ResponseEntity<BaseResponse<Boolean>> resetPassword(@PathVariable("uid") Long uid, String password, HttpServletRequest request) {
 		User user = userService.getById(uid);
 		if (user == null) {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, "用户不存在");
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "用户不存在", uid);
 		}
 		String encodePassword = PasswordUtil.encodePassword(password);
 		user.setPassword(encodePassword);
@@ -77,7 +77,7 @@ public class AdminController {
 	public ResponseEntity<BaseResponse<Boolean>> userRemove(@PathVariable("uid") Long uid, HttpServletRequest request) {
 		User user = userService.getById(uid);
 		if (user == null) {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, "用户不存在");
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "用户不存在", uid);
 		}
 		userService.removeById(uid);
 		return ResultUtil.ok(true);
@@ -91,7 +91,7 @@ public class AdminController {
 	public ResponseEntity<BaseResponse<Boolean>> userSetStatus(@PathVariable("uid") Long uid, Integer status, HttpServletRequest request) {
 		User user = userService.getById(uid);
 		if (user == null) {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, "用户不存在");
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "用户不存在", uid);
 		}
 		UserStatus userStatus = UserStatus.valueOf(status);
 		user.setStatus(userStatus.getCode());

@@ -61,7 +61,7 @@ public class AdminController {
 	public ResponseEntity<BaseResponse<Boolean>> resetPassword(@PathVariable("uid") Long uid, String password, HttpServletRequest request) {
 		User user = userService.getById(uid);
 		if (user == null) {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, "用户不存在", uid);
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "用户不存在", uid, request);
 		}
 		String encodePassword = PasswordUtil.encodePassword(password);
 		user.setPassword(encodePassword);
@@ -77,7 +77,7 @@ public class AdminController {
 	public ResponseEntity<BaseResponse<Boolean>> userRemove(@PathVariable("uid") Long uid, HttpServletRequest request) {
 		User user = userService.getById(uid);
 		if (user == null) {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, "用户不存在", uid);
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "用户不存在", uid, request);
 		}
 		userService.removeById(uid);
 		return ResultUtil.ok(true);
@@ -91,7 +91,7 @@ public class AdminController {
 	public ResponseEntity<BaseResponse<Boolean>> userSetStatus(@PathVariable("uid") Long uid, Integer status, HttpServletRequest request) {
 		User user = userService.getById(uid);
 		if (user == null) {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, "用户不存在", uid);
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "用户不存在", uid, request);
 		}
 		UserStatus userStatus = UserStatus.valueOf(status);
 		user.setStatus(userStatus.getCode());
@@ -106,7 +106,7 @@ public class AdminController {
 	@AuthCheck(must = "*")
 	public ResponseEntity<BaseResponse<Page<UserVO>>> getUserListPage(UserQueryRequest userQueryRequest, HttpServletRequest request) {
 		if (userQueryRequest == null) {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数错误");
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数错误", request);
 		}
 		User userQuery = new User();
 		BeanUtils.copyProperties(userQueryRequest, userQuery);
@@ -127,7 +127,7 @@ public class AdminController {
 		userQuery.setPhone(null);
 		// 限制爬虫
 		if (size > 100) {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR);
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, request);
 		}
 		QueryWrapper<User> queryWrapper = new QueryWrapper<>(userQuery);
 		queryWrapper.like(StringUtils.isNotBlank(userName), "username", userName);
@@ -151,7 +151,7 @@ public class AdminController {
 	@PostMapping("/permission/add")
 	@AuthCheck(must = "*")
 	public ResponseEntity<BaseResponse<Boolean>> addPermission(PermissionAddRequest permissionAddRequest, HttpServletRequest request) {
-		permissionService.addPermission(permissionAddRequest);
+		permissionService.addPermission(permissionAddRequest, request);
 		return ResultUtil.ok(true);
 	}
 

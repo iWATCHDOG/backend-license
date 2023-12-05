@@ -37,3 +37,22 @@ CREATE TABLE IF NOT EXISTS `oauth`
     updateTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     available  BOOL     DEFAULT TRUE              NOT NULL COMMENT '是否可用'
 );
+
+CREATE TABLE IF NOT EXISTS `log`
+(
+    id         BIGINT AUTO_INCREMENT              NOT NULL COMMENT 'id' PRIMARY KEY,
+    uid        BIGINT                             NULL COMMENT 'uid',
+    requestId  VARCHAR(36)                        NOT NULL COMMENT 'requestId',
+    ip         VARCHAR(32)                        NULL COMMENT 'ip',
+    userAgent  VARCHAR(256)                       NULL COMMENT 'userAgent',
+    cookies    TEXT                               NULL COMMENT 'cookies',
+    url        VARCHAR(256)                       NULL COMMENT 'url',
+    method     VARCHAR(16)                        NULL COMMENT 'method',
+    params     VARCHAR(256)                       NULL COMMENT 'params',
+    result     TEXT                               NULL COMMENT 'result',
+    httpCode   INTEGER                            NULL COMMENT 'httpCode',
+    cost       BIGINT                             NULL COMMENT 'cost',
+    createTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
+    updateTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    available  BOOL     DEFAULT TRUE              NOT NULL COMMENT '是否可用'
+);

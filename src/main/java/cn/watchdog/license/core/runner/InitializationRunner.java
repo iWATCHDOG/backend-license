@@ -7,7 +7,6 @@ import cn.watchdog.license.service.PermissionService;
 import cn.watchdog.license.service.UserService;
 import cn.watchdog.license.util.PasswordUtil;
 import cn.watchdog.license.util.StringUtil;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
@@ -17,7 +16,6 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.List;
 
 @Component
 @Slf4j
@@ -29,9 +27,7 @@ public class InitializationRunner implements ApplicationRunner {
 
 	@Override
 	public void run(ApplicationArguments args) throws Exception {
-		QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-		List<User> userList = userService.list(queryWrapper);
-		if (userList.isEmpty()) {
+		if (userService.init()) {
 			log.warn("检测到当前用户数据库未存在账户，正在创建管理员账户。");
 			String userName = "admin";
 			String userEmail = "admin@qq.com";
@@ -43,7 +39,7 @@ public class InitializationRunner implements ApplicationRunner {
 			user.setPassword(encryptPassword);
 			boolean result = userService.save(user);
 			if (!result) {
-				throw new BusinessException(ReturnCode.SYSTEM_ERROR, "添加失败，数据库错误");
+				throw new BusinessException(ReturnCode.SYSTEM_ERROR, "添加失败，数据库错误", null);
 			}
 			log.info("管理员账户创建成功！");
 			log.info("用户名：" + userName);
@@ -51,8 +47,8 @@ public class InitializationRunner implements ApplicationRunner {
 			log.info("邮箱：" + userEmail);
 			log.warn("请网站管理员在登录后及时修改账户信息（用户名、密码、邮箱等）。");
 			log.warn("此信息只显示一次，请妥善保管！");
-			userService.generateDefaultAvatar(user);
-			permissionService.addPermission(user.getUid(), "*", 0);
+			userService.generateDefaultAvatar(user, null);
+			permissionService.addPermission(user.getUid(), "*", 0, null);
 			try {
 				Files.write(Paths.get("admin.txt"), String.format("用户名: %s\n密码: %s\n邮箱: %s\n请网站管理员在登录后及时修改账户信息（用户名、密码、邮箱等）。", userName, userPassword, userEmail).getBytes());
 			} catch (IOException e) {

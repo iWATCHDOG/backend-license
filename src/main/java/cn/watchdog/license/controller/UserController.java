@@ -62,7 +62,7 @@ public class UserController {
 	public ResponseEntity<BaseResponse<Boolean>> userLogout(HttpServletRequest request) {
 		if (request == null) {
 
-			throw new BusinessException(ReturnCode.PARAMS_ERROR);
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, request);
 		}
 		boolean result = userService.userLogout(request);
 		return ResultUtil.ok(result);
@@ -86,7 +86,7 @@ public class UserController {
 	@AuthCheck()
 	public ResponseEntity<BaseResponse<Boolean>> uploadAvatar(@RequestBody MultipartFile avatar, HttpServletRequest request) {
 		User user = userService.getLoginUser(request);
-		userService.setupAvatar(user, avatar);
+		userService.setupAvatar(user, avatar, request);
 		return ResultUtil.ok(true);
 	}
 
@@ -94,15 +94,15 @@ public class UserController {
 	 * 获取头像
 	 */
 	@GetMapping("/get/avatar/{uid}")
-	public ResponseEntity<InputStreamResource> getAvatar(@PathVariable("uid") Long uid) {
+	public ResponseEntity<InputStreamResource> getAvatar(@PathVariable("uid") Long uid, HttpServletRequest request) {
 		User user = userService.getById(uid);
 		if (user == null) {
-			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "用户不存在", uid);
+			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "用户不存在", uid, request);
 		}
 		File file = new File(user.getAvatar());
 		if (!file.exists()) {
-			userService.generateDefaultAvatar(user);
-			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "头像文件不存在", uid);
+			userService.generateDefaultAvatar(user, request);
+			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "头像文件不存在", uid, request);
 		}
 		try {
 			InputStream is = new FileInputStream(file);
@@ -112,8 +112,8 @@ public class UserController {
 			InputStreamResource inputStreamResource = new InputStreamResource(is);
 			return new ResponseEntity<>(inputStreamResource, headers, StatusCode.OK);
 		} catch (Throwable e) {
-			userService.generateDefaultAvatar(user);
-			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "预览系统异常");
+			userService.generateDefaultAvatar(user, request);
+			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "预览系统异常", request);
 		}
 	}
 
@@ -121,10 +121,10 @@ public class UserController {
 	 * 获取用户名
 	 */
 	@GetMapping("/get/username/{uid}")
-	public ResponseEntity<BaseResponse<String>> getUsername(@PathVariable("uid") Long uid) {
+	public ResponseEntity<BaseResponse<String>> getUsername(@PathVariable("uid") Long uid, HttpServletRequest request) {
 		User user = userService.getById(uid);
 		if (user == null) {
-			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "用户不存在", uid);
+			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "用户不存在", uid, request);
 		}
 		return ResultUtil.ok(user.getUsername());
 	}

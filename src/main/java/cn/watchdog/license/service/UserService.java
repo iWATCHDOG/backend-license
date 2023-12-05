@@ -23,21 +23,25 @@ public interface UserService extends IService<User> {
 
 	User getLoginUser(HttpServletRequest request);
 
-	boolean checkDuplicates(String userName);
+	User getLoginUserIgnoreError(HttpServletRequest request);
 
-	boolean checkDuplicatesIgnoreError(String userName);
+	boolean checkDuplicates(String userName, HttpServletRequest request);
 
-	String generateUserName(String login, String prefix);
+	boolean checkDuplicatesIgnoreError(String userName, HttpServletRequest request);
 
-	@Async
-	void downloadAvatar(User user, String avatarUrl);
-
-	void setupAvatar(User user, MultipartFile file);
+	String generateUserName(String login, String prefix, HttpServletRequest request);
 
 	@Async
-	void generateDefaultAvatar(User user);
+	void downloadAvatar(User user, String avatarUrl, HttpServletRequest request);
+
+	void setupAvatar(User user, MultipartFile file, HttpServletRequest request);
+
+	@Async
+	void generateDefaultAvatar(User user, HttpServletRequest request);
 
 	void unbind(OAuthPlatForm oAuthPlatForm, HttpServletRequest request);
 
-	boolean checkStatus(User user);
+	boolean checkStatus(User user, HttpServletRequest request);
+
+	boolean init();
 }

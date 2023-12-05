@@ -5,6 +5,7 @@ import cn.watchdog.license.model.dto.PermissionRemoveRequest;
 import cn.watchdog.license.model.entity.Permission;
 import cn.watchdog.license.model.enums.Group;
 import com.baomidou.mybatisplus.extension.service.IService;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 import java.util.Set;
@@ -16,9 +17,9 @@ public interface PermissionService extends IService<Permission> {
 
 	Permission getPermission(long uid, String permission);
 
-	void addPermission(long uid, String permission, long expiry);
+	void addPermission(long uid, String permission, long expiry, HttpServletRequest request);
 
-	void addPermission(PermissionAddRequest permissionAddRequest);
+	void addPermission(PermissionAddRequest permissionAddRequest, HttpServletRequest request);
 
 	void removePermission(long uid, String permission);
 

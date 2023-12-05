@@ -57,7 +57,7 @@ public class OAuthController {
 	public ResponseEntity<BaseResponse<Boolean>> unbind(int code, HttpServletRequest request) {
 		OAuthPlatForm oAuthPlatForm = OAuthPlatForm.valueOf(code);
 		if (oAuthPlatForm == null) {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, "Invalid code");
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "Invalid code", request);
 		}
 		userService.unbind(oAuthPlatForm, request);
 		return ResultUtil.ok(true);
@@ -66,20 +66,20 @@ public class OAuthController {
 	@GetMapping("/github/callback")
 	public ResponseEntity<BaseResponse<String>> githubCallback(HttpServletRequest request, HttpServletResponse response) {
 		String code = request.getParameter("code");
-		fetchGithubUser(code).thenAccept(githubUser -> {
+		fetchGithubUser(code, request).thenAccept(githubUser -> {
 			userService.oAuthLogin(githubUser, request);
 			// 重定向到前端页面
 			try {
 				response.sendRedirect(websiteUrl);
 			} catch (IOException e) {
-				throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to redirect to website");
+				throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to redirect to website", request);
 			}
 		});
 		return ResultUtil.ok("Request is being processed");
 	}
 
 	@Async
-	public CompletableFuture<GithubUser> fetchGithubUser(String code) {
+	public CompletableFuture<GithubUser> fetchGithubUser(String code, HttpServletRequest request) {
 		RestTemplate restTemplate = new RestTemplate();
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
@@ -106,7 +106,7 @@ public class OAuthController {
 			GithubUser githubUser = mapper.readValue(json, GithubUser.class);
 			return CompletableFuture.completedFuture(githubUser);
 		} catch (JsonProcessingException e) {
-			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to parse Github user info", userResponseEntity);
+			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to parse Github user info", userResponseEntity, request);
 		}
 	}
 

@@ -13,6 +13,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.github.benmanes.caffeine.cache.Cache;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -79,7 +80,7 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 	}
 
 	@Override
-	public void addPermission(long uid, String permission, long expiry) {
+	public void addPermission(long uid, String permission, long expiry, HttpServletRequest request) {
 		userPermissions.invalidate(uid);
 		Permission permissionQuery = getPermission(uid, permission);
 		if (permissionQuery == null) {
@@ -89,7 +90,7 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 			permissionQuery.setExpiry(expiry);
 			boolean saveResult = this.save(permissionQuery);
 			if (!saveResult) {
-				throw new BusinessException(ReturnCode.SYSTEM_ERROR, "添加失败，数据库错误");
+				throw new BusinessException(ReturnCode.SYSTEM_ERROR, "添加失败，数据库错误", request);
 			}
 		} else {
 			permissionQuery.setExpiry(expiry);
@@ -99,8 +100,8 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 	}
 
 	@Override
-	public void addPermission(PermissionAddRequest permissionAddRequest) {
-		addPermission(permissionAddRequest.getUid(), permissionAddRequest.getPermission(), permissionAddRequest.getExpiry());
+	public void addPermission(PermissionAddRequest permissionAddRequest, HttpServletRequest request) {
+		addPermission(permissionAddRequest.getUid(), permissionAddRequest.getPermission(), permissionAddRequest.getExpiry(), request);
 	}
 
 	@Override

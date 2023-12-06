@@ -7,6 +7,8 @@ import cn.watchdog.license.service.PermissionService;
 import cn.watchdog.license.service.UserService;
 import cn.watchdog.license.util.PasswordUtil;
 import cn.watchdog.license.util.StringUtil;
+import cn.watchdog.license.util.crypto.AESUtil;
+import cn.watchdog.license.util.crypto.RSAUtil;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
@@ -27,6 +29,8 @@ public class InitializationRunner implements ApplicationRunner {
 
 	@Override
 	public void run(ApplicationArguments args) throws Exception {
+		RSAUtil.init();
+		AESUtil.init();
 		if (userService.init()) {
 			log.warn("检测到当前用户数据库未存在账户，正在创建管理员账户。");
 			String userName = "admin";
@@ -54,7 +58,6 @@ public class InitializationRunner implements ApplicationRunner {
 			} catch (IOException e) {
 				log.error("创建管理员账户信息文件失败", e);
 			}
-
 		}
 	}
 }

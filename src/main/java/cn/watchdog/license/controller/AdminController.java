@@ -9,9 +9,11 @@ import cn.watchdog.license.exception.BusinessException;
 import cn.watchdog.license.model.dto.PermissionAddRequest;
 import cn.watchdog.license.model.dto.PermissionRemoveRequest;
 import cn.watchdog.license.model.dto.UserQueryRequest;
+import cn.watchdog.license.model.entity.Log;
 import cn.watchdog.license.model.entity.User;
 import cn.watchdog.license.model.enums.UserStatus;
 import cn.watchdog.license.model.vo.UserVO;
+import cn.watchdog.license.service.LogService;
 import cn.watchdog.license.service.PermissionService;
 import cn.watchdog.license.service.UserService;
 import cn.watchdog.license.util.PasswordUtil;
@@ -42,6 +44,8 @@ public class AdminController {
 	private UserService userService;
 	@Resource
 	private PermissionService permissionService;
+	@Resource
+	private LogService logService;
 
 	@PostMapping("/user/add")
 	@AuthCheck(must = "*")
@@ -163,5 +167,15 @@ public class AdminController {
 	public ResponseEntity<BaseResponse<Boolean>> removePermission(PermissionRemoveRequest permissionRemoveRequest, HttpServletRequest request) {
 		permissionService.removePermission(permissionRemoveRequest);
 		return ResultUtil.ok(true);
+	}
+
+	/**
+	 * 查询Log
+	 */
+	@GetMapping("/log/{requestId}")
+	@AuthCheck(must = "*")
+	public ResponseEntity<BaseResponse<Log>> getLog(@PathVariable("requestId") String requestId, HttpServletRequest request) {
+		Log l = logService.getLog(requestId, request);
+		return ResultUtil.ok(l);
 	}
 }

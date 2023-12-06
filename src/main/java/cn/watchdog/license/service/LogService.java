@@ -7,5 +7,7 @@ import org.springframework.scheduling.annotation.Async;
 
 public interface LogService extends IService<Log> {
 	@Async
-	public void addLog(Log log, HttpServletRequest request);
+	void addLog(Log log, HttpServletRequest request);
+
+	Log getLog(String requestId, HttpServletRequest request);
 }

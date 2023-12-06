@@ -101,7 +101,6 @@ public class LogInterceptor {
 		if (user != null) {
 			l.setUid(user.getUid());
 		}
-		// 保存日志
 		logService.addLog(l, request);
 		return result;
 	}

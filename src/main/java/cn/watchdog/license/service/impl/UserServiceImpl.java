@@ -52,8 +52,6 @@ import static cn.watchdog.license.constant.UserConstant.*;
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 	private static final Cache<String, String> emailCode = CaffeineFactory.newBuilder().expireAfterWrite(10, TimeUnit.MINUTES).build();
 	@Resource
-	private UserMapper userMapper;
-	@Resource
 	private OAuthMapper oAuthMapper;
 	@Resource
 	private JdbcTemplate jdbcTemplate;
@@ -220,7 +218,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		OAuth oAuth = oAuthMapper.selectOne(oAuthQueryWrapper);
 		if (oAuth != null) {
 			// 已经绑定过，直接登录
-			User user = userMapper.selectById(oAuth.getUid());
+			User user = this.getById(oAuth.getUid());
 			if (user == null) {
 				throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "账户信息不存在", request);
 			}
@@ -276,7 +274,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			// 手机号登录
 			queryWrapper.eq("phone", account);
 		}
-		user = userMapper.selectOne(queryWrapper);
+		user = this.getOne(queryWrapper);
 		if (user == null) {
 			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "账户信息不存在", request);
 		}
@@ -336,7 +334,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 	public boolean checkDuplicates(String userName, HttpServletRequest request) {
 		QueryWrapper<User> queryWrapper = new QueryWrapper<>();
 		queryWrapper.eq("username", userName);
-		long count = userMapper.selectCount(queryWrapper);
+		long count = this.count(queryWrapper);
 		if (count > 0) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "账号重复", userName, request);
 		}
@@ -405,7 +403,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			Files.createDirectories(path.getParent());
 			Files.copy(inputStream, path, StandardCopyOption.REPLACE_EXISTING);
 			user.setAvatar(path.toString());
-			userMapper.updateById(user);
+			this.updateById(user);
 		} catch (IOException e) {
 			generateDefaultAvatar(user, request);
 			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to download avatar", avatarUrl, request);
@@ -431,7 +429,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			byte[] bytes = stream.toByteArray();
 			Files.write(path, bytes);
 			user.setAvatar(path.toString());
-			userMapper.updateById(user);
+			this.updateById(user);
 		} catch (IOException e) {
 			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to upload avatar", request);
 		}
@@ -472,7 +470,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			Files.createDirectories(path.getParent());
 			ImageIO.write(image, "png", path.toFile());
 			user.setAvatar(path.toString());
-			userMapper.updateById(user);
+			this.updateById(user);
 		} catch (IOException e) {
 			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "Failed to generate avatar", request);
 		}

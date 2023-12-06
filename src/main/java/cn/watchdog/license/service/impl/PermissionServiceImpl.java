@@ -12,7 +12,6 @@ import cn.watchdog.license.util.CaffeineFactory;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.github.benmanes.caffeine.cache.Cache;
-import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,8 +27,6 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 	private static final Cache<Long, Set<Permission>> userPermissions = CaffeineFactory.newBuilder()
 			.expireAfterWrite(3, TimeUnit.MINUTES)
 			.build();
-	@Resource
-	private PermissionMapper permissionMapper;
 
 	@Override
 	public Set<Permission> getUserPermissions(long uid) {
@@ -38,7 +35,7 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 			Permission permissionQuery = new Permission();
 			QueryWrapper<Permission> queryWrapper = new QueryWrapper<>(permissionQuery);
 			queryWrapper.eq("uid", uid);
-			List<Permission> lps = permissionMapper.selectList(queryWrapper);
+			List<Permission> lps = this.list(queryWrapper);
 			permissions = Set.copyOf(lps);
 			userPermissions.put(uid, permissions);
 		}
@@ -94,7 +91,7 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 			}
 		} else {
 			permissionQuery.setExpiry(expiry);
-			permissionMapper.updateById(permissionQuery);
+			this.updateById(permissionQuery);
 		}
 		userPermissions.invalidate(uid);
 	}
@@ -109,7 +106,7 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 		userPermissions.invalidate(uid);
 		Permission permissionQuery = getPermission(uid, permission);
 		if (permissionQuery != null) {
-			permissionMapper.deleteById(permissionQuery.getId());
+			this.removeById(permissionQuery.getId());
 		}
 		userPermissions.invalidate(uid);
 	}
@@ -125,7 +122,7 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 		Permission permissionQuery = getPermission(uid, permission);
 		if (permissionQuery != null) {
 			permissionQuery.setExpiry(expiry);
-			permissionMapper.updateById(permissionQuery);
+			this.updateById(permissionQuery);
 		}
 		userPermissions.invalidate(uid);
 	}

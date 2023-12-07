@@ -9,7 +9,7 @@ public enum PayPlatform {
 	// 支付宝跳转支付
 	ALIPAY_REDIRECT(2, "支付宝(2)"),
 	WECHAT(3, "微信(1)"),
-	EPAY(4, "易支付(1)"),;
+	EPAY(4, "易支付(1)");
 	final int code;
 	final String desc;
 

@@ -1,6 +1,6 @@
 package cn.watchdog.license.util.pay;
 
-import cc.vastsea.toyou.model.enums.pay.TradeStatus;
+import cn.watchdog.license.model.enums.pay.TradeStatus;
 import com.wechat.pay.java.core.RSAAutoCertificateConfig;
 import com.wechat.pay.java.service.payments.model.Transaction;
 import lombok.Getter;

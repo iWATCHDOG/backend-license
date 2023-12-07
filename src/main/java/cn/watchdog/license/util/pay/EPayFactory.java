@@ -19,6 +19,10 @@ public class EPayFactory {
 		EPayFactory.config = config;
 	}
 
+	public static boolean init() {
+		return config != null;
+	}
+
 	// Function to build the URL with parameters
 	private static String buildUrl(String baseUrl, Map<String, String> params) {
 		Map<String, String> sortedParam = new TreeMap<>(params);

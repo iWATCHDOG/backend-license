@@ -1,7 +1,7 @@
 package cn.watchdog.license.service;
 
-import cn.watchdog.license.model.dto.UserCreateRequest;
-import cn.watchdog.license.model.dto.UserLoginRequest;
+import cn.watchdog.license.model.dto.user.UserCreateRequest;
+import cn.watchdog.license.model.dto.user.UserLoginRequest;
 import cn.watchdog.license.model.entity.User;
 import cn.watchdog.license.model.enums.OAuthPlatForm;
 import cn.watchdog.license.util.oauth.GithubUser;

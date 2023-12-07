@@ -1,7 +1,7 @@
 package cn.watchdog.license.service;
 
-import cn.watchdog.license.model.dto.PermissionAddRequest;
-import cn.watchdog.license.model.dto.PermissionRemoveRequest;
+import cn.watchdog.license.model.dto.permission.PermissionAddRequest;
+import cn.watchdog.license.model.dto.permission.PermissionRemoveRequest;
 import cn.watchdog.license.model.entity.Permission;
 import cn.watchdog.license.model.enums.Group;
 import com.baomidou.mybatisplus.extension.service.IService;

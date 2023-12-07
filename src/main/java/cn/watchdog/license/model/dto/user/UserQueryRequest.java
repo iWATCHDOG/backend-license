@@ -1,4 +1,4 @@
-package cn.watchdog.license.model.dto;
+package cn.watchdog.license.model.dto.user;
 
 import cn.watchdog.license.common.PageRequest;
 import com.baomidou.mybatisplus.annotation.IdType;

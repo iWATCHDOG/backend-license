@@ -10,7 +10,6 @@ import java.net.InetAddress;
  */
 @Slf4j
 public class NetUtil {
-
 	/**
 	 * 获取客户端 IP 地址
 	 */
@@ -30,7 +29,7 @@ public class NetUtil {
 				try {
 					inet = InetAddress.getLocalHost();
 				} catch (Exception e) {
-					e.printStackTrace();
+					log.error("getIpAddress error: {}", e.getMessage(), e);
 				}
 				if (inet != null) {
 					ip = inet.getHostAddress();
@@ -52,18 +51,17 @@ public class NetUtil {
 	/**
 	 * 判断是否为移动端设备
 	 *
-	 * @param request 请求
-	 * @return 是否为移动端设备, true为移动端设备, false为PC端设备
+	 * @return true为移动端设备，false为PC端设备
 	 */
 	public static boolean isMobileDevice(HttpServletRequest request) {
 		String requestHeader = request.getHeader("user-agent");
-		String[] deviceArray = {"android", "windows phone"};
+		String[] deviceArray = {"android", "iphone", "ipod", "ipad", "windows phone", "mqqbrowser"};
 		if (requestHeader == null) {
 			return false;
 		}
 		requestHeader = requestHeader.toLowerCase();
-		for (String device : deviceArray) {
-			if (requestHeader.contains(device)) {
+		for (String aDeviceArray : deviceArray) {
+			if (requestHeader.contains(aDeviceArray)) {
 				return true;
 			}
 		}

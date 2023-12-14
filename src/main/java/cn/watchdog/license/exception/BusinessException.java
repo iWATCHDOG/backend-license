@@ -16,7 +16,6 @@ import javax.annotation.Nullable;
 @EqualsAndHashCode(callSuper = true)
 @Data
 public class BusinessException extends RuntimeException {
-
 	private final int code;
 	private Object data;
 	private String method;

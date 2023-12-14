@@ -35,6 +35,13 @@ public class BaseResponse<T> implements Serializable {
 		this(returnCode.getCode(), data, returnCode.getMessage());
 	}
 
+	public void setCode(ReturnCode returnCode) {
+		this.code = returnCode.getCode();
+		if (this.message == null || this.message.isEmpty()) {
+			this.message = returnCode.getMessage();
+		}
+	}
+
 	@Data
 	public static class RequestInfo {
 		private String requestId;

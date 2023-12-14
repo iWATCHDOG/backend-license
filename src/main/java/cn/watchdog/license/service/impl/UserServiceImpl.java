@@ -12,6 +12,7 @@ import cn.watchdog.license.model.enums.OAuthPlatForm;
 import cn.watchdog.license.model.enums.UserStatus;
 import cn.watchdog.license.service.UserService;
 import cn.watchdog.license.util.CaffeineFactory;
+import cn.watchdog.license.util.NetUtil;
 import cn.watchdog.license.util.NumberUtil;
 import cn.watchdog.license.util.PasswordUtil;
 import cn.watchdog.license.util.oauth.GithubUser;
@@ -51,6 +52,10 @@ import static cn.watchdog.license.constant.UserConstant.*;
 @Slf4j
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 	private static final Cache<String, String> emailCode = CaffeineFactory.newBuilder().expireAfterWrite(10, TimeUnit.MINUTES).build();
+	// 在UserServiceImpl类中，创建一个新的Caffeine缓存
+	private static final Cache<String, Integer> failLoginCache = CaffeineFactory.newBuilder().expireAfterWrite(30, TimeUnit.MINUTES).build();
+	private static final Cache<String, User> userCache = CaffeineFactory.newBuilder().expireAfterWrite(3, TimeUnit.SECONDS).build();
+
 	@Resource
 	private OAuthMapper oAuthMapper;
 	@Resource
@@ -278,8 +283,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		if (user == null) {
 			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "账户信息不存在", request);
 		}
+		long uid = user.getUid();
+		if (checkFailLogin(account, request)) {
+			throw new BusinessException(ReturnCode.TOO_MANY_REQUESTS_ERROR, "登录失败次数过多，请稍后再试", request);
+		}
 		// 检查密码
 		if (!PasswordUtil.checkPassword(password, user.getPassword())) {
+			addFailLogin(account, request);
 			throw new BusinessException(ReturnCode.VALIDATION_FAILED, "密码错误", request);
 		}
 		checkStatus(user, request);
@@ -329,6 +339,29 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		}
 	}
 
+	@Override
+	public User getLoginUserIgnoreErrorCache(HttpServletRequest request) {
+		String ip = NetUtil.getIpAddress(request);
+		User user = userCache.getIfPresent(ip);
+		if (user != null) {
+			refreshLoginUserCache(request);
+			return user;
+		}
+		user = getLoginUserIgnoreError(request);
+		if (user != null) {
+			userCache.put(ip, user);
+		}
+		return user;
+	}
+
+	@Async
+	public void refreshLoginUserCache(HttpServletRequest request) {
+		String ip = NetUtil.getIpAddress(request);
+		User user = getLoginUserIgnoreError(request);
+		if (user != null) {
+			userCache.put(ip, user);
+		}
+	}
 
 	@Override
 	public boolean checkDuplicates(String userName, HttpServletRequest request) {
@@ -528,5 +561,22 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			obj = null;
 		}
 		return obj == null || Integer.parseInt(obj) == 0;
+	}
+
+	// 检查用户的UID和IP地址是否在缓存中
+	public boolean checkFailLogin(String account, HttpServletRequest request) {
+		String ip = NetUtil.getIpAddress(request);
+		Integer accountFailCount = failLoginCache.getIfPresent(account);
+		Integer ipFailCount = failLoginCache.getIfPresent(ip);
+		return (accountFailCount != null && accountFailCount >= 5) || (ipFailCount != null && ipFailCount >= 5);
+	}
+
+	// 将用户的UID和IP地址添加到缓存中
+	public void addFailLogin(String account, HttpServletRequest request) {
+		String ip = NetUtil.getIpAddress(request);
+		Integer accountFailCount = failLoginCache.getIfPresent(account);
+		failLoginCache.put(account, accountFailCount == null ? 1 : accountFailCount + 1);
+		Integer ipFailCount = failLoginCache.getIfPresent(ip);
+		failLoginCache.put(ip, ipFailCount == null ? 1 : ipFailCount + 1);
 	}
 }

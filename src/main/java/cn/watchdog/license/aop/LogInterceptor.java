@@ -97,7 +97,7 @@ public class LogInterceptor {
 		} catch (Throwable ignored) {
 		}
 		// 当前登录用户
-		User user = userService.getLoginUserIgnoreError(request);
+		User user = userService.getLoginUserIgnoreErrorCache(request);
 		if (user != null) {
 			l.setUid(user.getUid());
 		}

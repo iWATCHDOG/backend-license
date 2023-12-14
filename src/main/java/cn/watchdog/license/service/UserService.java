@@ -25,6 +25,8 @@ public interface UserService extends IService<User> {
 
 	User getLoginUserIgnoreError(HttpServletRequest request);
 
+	User getLoginUserIgnoreErrorCache(HttpServletRequest request);
+
 	boolean checkDuplicates(String userName, HttpServletRequest request);
 
 	boolean checkDuplicatesIgnoreError(String userName, HttpServletRequest request);

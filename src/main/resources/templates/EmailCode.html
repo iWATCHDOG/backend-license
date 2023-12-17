@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>您的验证码</title>
+    <style type="text/css">
+        body {
+            font-family: 'Google Sans', Roboto, Arial, sans-serif;
+            background-color: #FAFAFA;
+            margin: 0;
+            padding: 0;
+            color: #202124;
+        }
+
+        .container {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .message {
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            display: inline-block;
+            margin: auto;
+            padding: 40px 20px;
+            background-color: #FFFFFF;
+            max-width: 400px;
+        }
+
+        .code {
+            display: inline-block;
+            border-radius: 4px;
+            background-color: #E8F0FE;
+            padding: 10px 15px;
+            font-size: 18px;
+            letter-spacing: 3px;
+            margin-top: 20px;
+            font-weight: bold;
+            color: #1a73e8;
+        }
+
+        .footer {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #5f6368;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="message">
+        <h2>您的验证码</h2>
+        <p>请在下面的框中输入此验证码，以继续您的操作：</p>
+        <div class="code" th:text="${code}"></div>
+        <p class="footer">此验证码将在10分钟后失效。</p>
+    </div>
+</div>
+</body>
+</html>

@@ -46,4 +46,8 @@ public interface UserService extends IService<User> {
 	boolean checkStatus(User user, HttpServletRequest request);
 
 	boolean init();
+
+	boolean checkEmail(String email, HttpServletRequest request);
+
+	User getByEmail(String email, HttpServletRequest request);
 }

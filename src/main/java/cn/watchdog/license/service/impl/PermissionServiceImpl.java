@@ -24,9 +24,7 @@ import java.util.concurrent.TimeUnit;
 @Service
 @Slf4j
 public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permission> implements PermissionService {
-	private static final Cache<Long, Set<Permission>> userPermissions = CaffeineFactory.newBuilder()
-			.expireAfterWrite(3, TimeUnit.MINUTES)
-			.build();
+	private static final Cache<Long, Set<Permission>> userPermissions = CaffeineFactory.newBuilder().expireAfterWrite(3, TimeUnit.MINUTES).build();
 
 	@Override
 	public Set<Permission> getUserPermissions(long uid) {
@@ -51,6 +49,9 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 				return true;
 			}
 			if (p.getPermission().equals("*")) {
+				return true;
+			}
+			if (p.getPermission().equals("group." + Group.ADMIN.name())) {
 				return true;
 			}
 			if (p.getPermission().equalsIgnoreCase(permission)) {
@@ -136,6 +137,9 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 				if (permission.getPermission().startsWith("group.")) {
 					groups.add(permission);
 				}
+				if (permission.getPermission().equals("*")) {
+					groups.add(permission);
+				}
 			} else {
 				this.removeById(permission.getId());
 				userPermissions.invalidate(uid);
@@ -150,6 +154,9 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 		Group maxPriorityGroup = Group.DEFAULT;
 		for (Permission group : groups) {
 			try {
+				if (group.getPermission().equals("*")) {
+					return Group.ADMIN;
+				}
 				Group g = Group.valueOf(group.getPermission().substring(6).toUpperCase());
 				if (g.getPriority() > maxPriorityGroup.getPriority()) {
 					maxPriorityGroup = g;
@@ -167,6 +174,9 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 		Permission i = null;
 		for (Permission group : groups) {
 			try {
+				if (group.getPermission().equals("*")) {
+					return group;
+				}
 				Group g = Group.valueOf(group.getPermission().substring(6).toUpperCase());
 				if (g.getPriority() > maxPriorityGroup.getPriority()) {
 					maxPriorityGroup = g;

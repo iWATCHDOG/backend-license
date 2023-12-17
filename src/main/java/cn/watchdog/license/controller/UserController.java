@@ -11,8 +11,11 @@ import cn.watchdog.license.model.dto.user.UserLoginRequest;
 import cn.watchdog.license.model.entity.Permission;
 import cn.watchdog.license.model.entity.User;
 import cn.watchdog.license.model.vo.UserVO;
+import cn.watchdog.license.service.MailService;
 import cn.watchdog.license.service.PermissionService;
 import cn.watchdog.license.service.UserService;
+import cn.watchdog.license.service.impl.UserServiceImpl;
+import cn.watchdog.license.util.StringUtil;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +35,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/user")
@@ -41,10 +45,35 @@ public class UserController {
 	private UserService userService;
 	@Resource
 	private PermissionService permissionService;
+	@Resource
+	private MailService mailService;
 
 	@PostMapping("/create")
 	public ResponseEntity<BaseResponse<Boolean>> userCreate(UserCreateRequest userCreateRequest, HttpServletRequest request) {
 		return ResultUtil.ok(userService.userCreate(userCreateRequest, request));
+	}
+
+	@PostMapping("create/email")
+	public ResponseEntity<BaseResponse<Boolean>> userCreateEmail(String email, HttpServletRequest request) {
+		boolean check = userService.checkEmail(email, request);
+		if (!check) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "邮箱已被注册", email, request);
+		}
+		String code = StringUtil.getRandomString(6);
+		mailService.getEmailCode(email, code);
+		UserServiceImpl.codeCache.put(email, code);
+		return ResultUtil.ok(true);
+	}
+
+	@PostMapping("forget/email")
+	public ResponseEntity<BaseResponse<Boolean>> forgetPasswordEmail(String email, HttpServletRequest request) {
+		User user = userService.getByEmail(email, request);
+		if (user != null) {
+			String token = UUID.randomUUID().toString();
+			mailService.forgetPassword(email, token);
+			UserServiceImpl.forgetPasswordCache.put(token, user.getUid());
+		}
+		return ResultUtil.ok(true);
 	}
 
 	@GetMapping("/login")

@@ -7,7 +7,8 @@ public enum Group {
 	/**
 	 * 默认
 	 */
-	DEFAULT(0, 0, 0);
+	DEFAULT(0, 0, 0),
+	ADMIN(100000, 0, 0);
 
 	/**
 	 * 数字越大越优先

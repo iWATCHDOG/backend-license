@@ -31,10 +31,12 @@ public class ResultUtil {
 	}
 
 	public static <T> ResponseEntity<BaseResponse<T>> failed(ReturnCode returnCode, int httpCode) {
+		httpCode = 200;
 		return new ResponseEntity<>(error(returnCode), null, httpCode);
 	}
 
 	public static <T> ResponseEntity<BaseResponse<T>> failed(ReturnCode returnCode, T data, int httpCode) {
+		httpCode = 200;
 		return new ResponseEntity<>(error(returnCode, data), null, httpCode);
 	}
 
@@ -50,10 +52,12 @@ public class ResultUtil {
 	}
 
 	public static <T> ResponseEntity<BaseResponse<T>> failed(int errorCode, String message, int httpCode) {
+		httpCode = 200;
 		return new ResponseEntity<>(error(errorCode, message), null, httpCode);
 	}
 
 	public static <T> ResponseEntity<BaseResponse<T>> failed(int errorCode, T data, String message, int httpCode) {
+		httpCode = 200;
 		return new ResponseEntity<>(error(errorCode, data, message), null, httpCode);
 	}
 
@@ -69,18 +73,22 @@ public class ResultUtil {
 	}
 
 	public static <T> ResponseEntity<BaseResponse<T>> failed(ReturnCode returnCode, String message, int httpCode) {
+		httpCode = 200;
 		return new ResponseEntity<>(error(returnCode, message), null, httpCode);
 	}
 
 	public static <T> ResponseEntity<BaseResponse<T>> failed(ReturnCode returnCode, T data, String message, int httpCode) {
+		httpCode = 200;
 		return new ResponseEntity<>(error(returnCode, data, message), null, httpCode);
 	}
 
 	public static <T> ResponseEntity<BaseResponse<T>> of(ReturnCode returnCode, T data, MultiValueMap<String, String> headers, int httpCode) {
+		httpCode = 200;
 		return new ResponseEntity<>(new BaseResponse<>(returnCode.getCode(), data, returnCode.getMessage()), headers, httpCode);
 	}
 
 	public static <T> ResponseEntity<BaseResponse<T>> of(ReturnCode returnCode, T data, int httpCode) {
+		httpCode = 200;
 		return of(returnCode, data, null, httpCode);
 	}
 

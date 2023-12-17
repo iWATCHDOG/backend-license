@@ -4,6 +4,7 @@ import cn.watchdog.license.common.BaseResponse;
 import cn.watchdog.license.common.ResultUtil;
 import cn.watchdog.license.common.ReturnCode;
 import cn.watchdog.license.exception.BusinessException;
+import cn.watchdog.license.model.entity.User;
 import cn.watchdog.license.model.enums.OAuthPlatForm;
 import cn.watchdog.license.service.UserService;
 import cn.watchdog.license.util.oauth.GithubUser;
@@ -48,8 +49,14 @@ public class OAuthController {
 	private UserService userService;
 
 	@GetMapping("/github")
-	public ResponseEntity<BaseResponse<String>> github(HttpServletRequest request) {
+	public ResponseEntity<BaseResponse<String>> github(HttpServletRequest request, HttpServletResponse response) {
 		String url = String.format("https://github.com/login/oauth/authorize?client_id=%s&redirect_uri=%s", githubClientId, githubRedirectUri);
+		// 直接重定向到url
+		try {
+			response.sendRedirect(url);
+		} catch (IOException e) {
+			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to redirect to Github", request);
+		}
 		return ResultUtil.ok(url);
 	}
 
@@ -67,7 +74,7 @@ public class OAuthController {
 	public ResponseEntity<BaseResponse<String>> githubCallback(HttpServletRequest request, HttpServletResponse response) {
 		String code = request.getParameter("code");
 		fetchGithubUser(code, request).thenAccept(githubUser -> {
-			userService.oAuthLogin(githubUser, request);
+			User user = userService.oAuthLogin(githubUser, request);
 			// 重定向到前端页面
 			try {
 				response.sendRedirect(websiteUrl);

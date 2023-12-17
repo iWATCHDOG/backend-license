@@ -15,6 +15,7 @@ import cn.watchdog.license.util.CaffeineFactory;
 import cn.watchdog.license.util.NetUtil;
 import cn.watchdog.license.util.NumberUtil;
 import cn.watchdog.license.util.PasswordUtil;
+import cn.watchdog.license.util.StringUtil;
 import cn.watchdog.license.util.oauth.GithubUser;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -51,7 +52,8 @@ import static cn.watchdog.license.constant.UserConstant.*;
 @Service
 @Slf4j
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
-	private static final Cache<String, String> emailCode = CaffeineFactory.newBuilder().expireAfterWrite(10, TimeUnit.MINUTES).build();
+	public static final Cache<String, String> codeCache = CaffeineFactory.newBuilder().expireAfterWrite(10, TimeUnit.MINUTES).build();
+	public static final Cache<String, Long> forgetPasswordCache = CaffeineFactory.newBuilder().expireAfterWrite(30, TimeUnit.MINUTES).build();
 	// 在UserServiceImpl类中，创建一个新的Caffeine缓存
 	private static final Cache<String, Integer> failLoginCache = CaffeineFactory.newBuilder().expireAfterWrite(30, TimeUnit.MINUTES).build();
 	private static final Cache<String, User> userCache = CaffeineFactory.newBuilder().expireAfterWrite(3, TimeUnit.SECONDS).build();
@@ -117,22 +119,22 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		User user = new User();
 		user.setUsername(userName);
 		user.setPassword(PasswordUtil.encodePassword(userPassword));
+		// 检查验证码
+		if (StringUtils.isBlank(code)) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "验证码为空", request);
+		}
 		if (!StringUtils.isAnyBlank(email)) {
 			// 邮箱注册
 			// 检查邮箱格式
 			if (!email.matches("^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+$")) {
 				throw new BusinessException(ReturnCode.PARAMS_ERROR, "邮箱格式错误", email, request);
 			}
-			// 检查邮箱验证码
-			if (StringUtils.isBlank(code)) {
-				throw new BusinessException(ReturnCode.PARAMS_ERROR, "邮箱验证码为空", request);
-			}
-			String emailCodeCache = emailCode.getIfPresent(email);
-			if (emailCodeCache == null || !emailCodeCache.equals(code)) {
-				throw new BusinessException(ReturnCode.PARAMS_ERROR, "邮箱验证码错误", code, request);
-			}
 			user.setEmail(email);
-			emailCode.invalidate(email);
+			String icode = UserServiceImpl.codeCache.getIfPresent(email);
+			if (icode == null || !icode.equals(code)) {
+				throw new BusinessException(ReturnCode.PARAMS_ERROR, "验证码错误", code, request);
+			}
+			UserServiceImpl.codeCache.invalidate(email);
 		} else {
 			// 手机号注册
 			// 检查是否为中国大陆地区的手机号格式
@@ -140,6 +142,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 				throw new BusinessException(ReturnCode.PARAMS_ERROR, "手机号格式错误", phone, request);
 			}
 			user.setPhone(phone);
+			String icode = UserServiceImpl.codeCache.getIfPresent(phone);
+			if (icode == null || !icode.equals(code)) {
+				throw new BusinessException(ReturnCode.PARAMS_ERROR, "验证码错误", code, request);
+			}
+			UserServiceImpl.codeCache.invalidate(phone);
 		}
 		boolean saveResult = this.save(user);
 		if (!saveResult) {
@@ -160,7 +167,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		if (!userName.matches("^[a-zA-Z0-9_-]{1,16}$")) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "账号格式错误", userName, request);
 		}
-		// 检查密码不过分简单。大小写字母、数字、特殊符号中至少包含两个，且长度大于8小于30。
+		// 检查密码不过分简单。密码必须包含大小写字母、数字、特殊符号中的三种，且长度为8-30位
 		if (!userPassword.matches("^(?![a-zA-Z]+$)(?![A-Z0-9]+$)(?![A-Z\\W_]+$)(?![a-z0-9]+$)(?![a-z\\W_]+$)(?![0-9\\W_]+$)[a-zA-Z0-9\\W_]{8,30}$")) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "密码格式错误", userPassword, request);
 		}
@@ -236,8 +243,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		User user = new User();
 		String username = generateUserName(login, oAuthPlatForm.name().toLowerCase(), request);
 		user.setUsername(username);
-		UUID uuid = UUID.randomUUID();
-		user.setPassword(PasswordUtil.encodePassword(uuid.toString()));
+		String randomPassword = StringUtil.getRandomString(10);
+		user.setPassword(PasswordUtil.encodePassword(randomPassword));
 		user.setEmail(email);
 		boolean saveResult = this.save(user);
 		if (!saveResult) {
@@ -264,10 +271,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		if (userLoginRequest == null) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空", request);
 		}
-		if (checkIsLogin(request)) {
-			throw new BusinessException(ReturnCode.OPERATION_ERROR, "已登录", request);
+		User user = getLoginUserIgnoreError(request);
+		if (user != null) {
+			return user;
 		}
-		User user;
 		String account = userLoginRequest.getAccount();
 		String password = userLoginRequest.getPassword();
 		// 判断是否是邮箱登录
@@ -315,6 +322,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		// 先判断是否已登录
 		Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
 		User currentUser = (User) userObj;
+		log.warn("currentUser: {}", currentUser);
 		if (currentUser == null || currentUser.getUid() == null) {
 			throw new BusinessException(ReturnCode.NOT_LOGIN_ERROR, "未登录", request);
 		}
@@ -578,5 +586,32 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		failLoginCache.put(account, accountFailCount == null ? 1 : accountFailCount + 1);
 		Integer ipFailCount = failLoginCache.getIfPresent(ip);
 		failLoginCache.put(ip, ipFailCount == null ? 1 : ipFailCount + 1);
+	}
+
+	@Override
+	public boolean checkEmail(String email, HttpServletRequest request) {
+		if (StringUtils.isBlank(email)) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "邮箱为空", request);
+		}
+		if (!email.matches("^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+$")) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "邮箱格式错误", email, request);
+		}
+		QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+		queryWrapper.eq("email", email);
+		long count = this.count(queryWrapper);
+		if (count > 0) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "邮箱已存在", email, request);
+		}
+		return true;
+	}
+
+	@Override
+	public User getByEmail(String email, HttpServletRequest request) {
+		if (StringUtils.isBlank(email)) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "邮箱为空", request);
+		}
+		QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+		queryWrapper.eq("email", email);
+		return this.getOne(queryWrapper);
 	}
 }

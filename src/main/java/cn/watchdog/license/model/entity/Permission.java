@@ -34,7 +34,7 @@ public class Permission implements Serializable {
 	public Group getGroup() {
 		try {
 			return Group.valueOf(permission.substring(6).toUpperCase());
-		} catch (IllegalArgumentException ignored) {
+		} catch (Throwable ignored) {
 			return Group.DEFAULT;
 		}
 	}

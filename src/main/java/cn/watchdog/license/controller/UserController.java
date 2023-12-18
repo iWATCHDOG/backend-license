@@ -6,10 +6,12 @@ import cn.watchdog.license.common.ResultUtil;
 import cn.watchdog.license.common.ReturnCode;
 import cn.watchdog.license.common.StatusCode;
 import cn.watchdog.license.exception.BusinessException;
+import cn.watchdog.license.model.dto.user.UpdateUserProfileRequest;
 import cn.watchdog.license.model.dto.user.UserCreateRequest;
 import cn.watchdog.license.model.dto.user.UserLoginRequest;
 import cn.watchdog.license.model.entity.Permission;
 import cn.watchdog.license.model.entity.User;
+import cn.watchdog.license.model.enums.UserGender;
 import cn.watchdog.license.model.vo.UserVO;
 import cn.watchdog.license.service.MailService;
 import cn.watchdog.license.service.PermissionService;
@@ -19,9 +21,11 @@ import cn.watchdog.license.util.StringUtil;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,6 +40,8 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.UUID;
+
+import static cn.watchdog.license.constant.UserConstant.*;
 
 @RestController
 @RequestMapping("/user")
@@ -66,14 +72,38 @@ public class UserController {
 	}
 
 	@PostMapping("forget/email")
-	public ResponseEntity<BaseResponse<Boolean>> forgetPasswordEmail(String email, HttpServletRequest request) {
+	public ResponseEntity<BaseResponse<String>> forgetPasswordEmail(String email, HttpServletRequest request) {
 		User user = userService.getByEmail(email, request);
 		if (user != null) {
 			String token = UUID.randomUUID().toString();
 			mailService.forgetPassword(email, token);
-			UserServiceImpl.forgetPasswordCache.put(token, user.getUid());
+			UserServiceImpl.forgetPasswordCache.put(token, user);
 		}
+		return ResultUtil.ok(email);
+	}
+
+	@PostMapping("forget/password")
+	public ResponseEntity<BaseResponse<Boolean>> forgetPassword(String password, HttpServletRequest request) {
+		String token = request.getHeader(FORGET_TOKEN);
+		if (StringUtils.isAllBlank(token, password)) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数错误", request);
+		}
+		User user = UserServiceImpl.forgetPasswordCache.getIfPresent(token);
+		if (user == null) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "token无效", token, request);
+		}
+		userService.updatePassword(user, password, request);
+		UserServiceImpl.forgetPasswordCache.invalidate(token);
 		return ResultUtil.ok(true);
+	}
+
+	@GetMapping("check/forget")
+	public ResponseEntity<BaseResponse<String>> checkForgetPasswordToken(String token, HttpServletRequest request) {
+		User user = UserServiceImpl.forgetPasswordCache.getIfPresent(token);
+		if (user == null) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "token无效", token, request);
+		}
+		return ResultUtil.ok(user.getEmail());
 	}
 
 	@GetMapping("/login")
@@ -89,10 +119,6 @@ public class UserController {
 	@PostMapping("/logout")
 	@AuthCheck()
 	public ResponseEntity<BaseResponse<Boolean>> userLogout(HttpServletRequest request) {
-		if (request == null) {
-
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, request);
-		}
 		boolean result = userService.userLogout(request);
 		return ResultUtil.ok(result);
 	}
@@ -114,9 +140,43 @@ public class UserController {
 	@PostMapping("/upload/avatar")
 	@AuthCheck()
 	public ResponseEntity<BaseResponse<Boolean>> uploadAvatar(@RequestBody MultipartFile avatar, HttpServletRequest request) {
+		// 获取所有Request Body
 		User user = userService.getLoginUser(request);
 		userService.setupAvatar(user, avatar, request);
 		return ResultUtil.ok(true);
+	}
+
+	/**
+	 * 更新用户信息
+	 */
+	@PostMapping("/update/profile")
+	@AuthCheck()
+	public ResponseEntity<BaseResponse<Boolean>> updateUserProfile(UpdateUserProfileRequest updateUserProfileRequest, HttpServletRequest request) {
+		User user = userService.getLoginUser(request);
+		String username = updateUserProfileRequest.getUsername();
+		Integer gender = updateUserProfileRequest.getGender();
+		boolean update = false;
+		if (StringUtils.isNotBlank(username)) {
+			if (!username.equals(user.getUsername())) {
+				if (!username.matches("^[a-zA-Z0-9_-]{1,16}$")) {
+					throw new BusinessException(ReturnCode.PARAMS_ERROR, "用户名格式错误", request);
+				}
+				update = true;
+				user.setUsername(username);
+			}
+		}
+		if (gender != null) {
+			UserGender userGender = UserGender.valueOf(gender);
+			if (userGender.getCode() != user.getGender()) {
+				update = true;
+				user.setGender(userGender.getCode());
+			}
+
+		}
+		if (update) {
+			userService.updateById(user);
+		}
+		return ResultUtil.ok(update);
 	}
 
 	/**
@@ -180,5 +240,18 @@ public class UserController {
 		long uid = user.getUid();
 		Permission ret = permissionService.getMaxPriorityGroupP(uid);
 		return ResultUtil.ok(ret);
+	}
+
+	/**
+	 * 注销
+	 */
+	@DeleteMapping("")
+	@AuthCheck()
+	public ResponseEntity<BaseResponse<Boolean>> userDelete(HttpServletRequest request) {
+		User user = userService.getLoginUser(request);
+		userLogout(request);
+		userService.clearOAuthByUser(user, request);
+		userService.removeById(user);
+		return ResultUtil.ok(true);
 	}
 }

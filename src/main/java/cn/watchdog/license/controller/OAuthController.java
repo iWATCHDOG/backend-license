@@ -1,9 +1,11 @@
 package cn.watchdog.license.controller;
 
+import cn.watchdog.license.annotation.AuthCheck;
 import cn.watchdog.license.common.BaseResponse;
 import cn.watchdog.license.common.ResultUtil;
 import cn.watchdog.license.common.ReturnCode;
 import cn.watchdog.license.exception.BusinessException;
+import cn.watchdog.license.model.entity.OAuth;
 import cn.watchdog.license.model.entity.User;
 import cn.watchdog.license.model.enums.OAuthPlatForm;
 import cn.watchdog.license.service.UserService;
@@ -60,9 +62,24 @@ public class OAuthController {
 		return ResultUtil.ok(url);
 	}
 
+	@GetMapping("/info")
+	@AuthCheck()
+	public ResponseEntity<BaseResponse<String>> oauth(Integer type, HttpServletRequest request, HttpServletResponse response) {
+		OAuthPlatForm oAuthPlatForm = OAuthPlatForm.valueOf(type);
+		if (oAuthPlatForm == null) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "Invalid type", request);
+		}
+		User user = userService.getLoginUser(request);
+		OAuth oAuth = userService.getOAuthByUidAndPlatform(user, oAuthPlatForm, request);
+		if (oAuth == null) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "OAuth not found", request);
+		}
+		return ResultUtil.ok(oAuth.getOpenId());
+	}
+
 	@DeleteMapping("/unbind")
-	public ResponseEntity<BaseResponse<Boolean>> unbind(int code, HttpServletRequest request) {
-		OAuthPlatForm oAuthPlatForm = OAuthPlatForm.valueOf(code);
+	public ResponseEntity<BaseResponse<Boolean>> unbind(int type, HttpServletRequest request) {
+		OAuthPlatForm oAuthPlatForm = OAuthPlatForm.valueOf(type);
 		if (oAuthPlatForm == null) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "Invalid code", request);
 		}
@@ -73,15 +90,24 @@ public class OAuthController {
 	@GetMapping("/github/callback")
 	public ResponseEntity<BaseResponse<String>> githubCallback(HttpServletRequest request, HttpServletResponse response) {
 		String code = request.getParameter("code");
-		fetchGithubUser(code, request).thenAccept(githubUser -> {
-			User user = userService.oAuthLogin(githubUser, request);
-			// 重定向到前端页面
+		try {
+			fetchGithubUser(code, request).thenAccept(githubUser -> {
+				User user = userService.oAuthLogin(githubUser, request);
+				// 重定向到前端页面
+				try {
+					response.sendRedirect(websiteUrl);
+				} catch (IOException e) {
+					throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to redirect to website", request);
+				}
+			});
+		} catch (Exception ignored) {
+		} finally {
 			try {
 				response.sendRedirect(websiteUrl);
-			} catch (IOException e) {
+			} catch (IOException i) {
 				throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to redirect to website", request);
 			}
-		});
+		}
 		return ResultUtil.ok("Request is being processed");
 	}
 

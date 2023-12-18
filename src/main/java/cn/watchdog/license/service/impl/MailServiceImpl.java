@@ -66,7 +66,7 @@ public class MailServiceImpl implements MailService {
 			helper.setSubject("License-找回密码");
 			helper.setCc(from);
 			Context context = new Context();
-			String link = websiteUrl + "/forget/" + token;
+			String link = websiteUrl + "/user/forget/" + token;
 			context.setVariable("link", link);
 			String text = templateEngine.process("ForgetPassword", context);
 			helper.setText(text, true);

@@ -2,11 +2,13 @@ package cn.watchdog.license.service;
 
 import cn.watchdog.license.model.dto.user.UserCreateRequest;
 import cn.watchdog.license.model.dto.user.UserLoginRequest;
+import cn.watchdog.license.model.entity.OAuth;
 import cn.watchdog.license.model.entity.User;
 import cn.watchdog.license.model.enums.OAuthPlatForm;
 import cn.watchdog.license.util.oauth.GithubUser;
 import com.baomidou.mybatisplus.extension.service.IService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -50,4 +52,10 @@ public interface UserService extends IService<User> {
 	boolean checkEmail(String email, HttpServletRequest request);
 
 	User getByEmail(String email, HttpServletRequest request);
+
+	void updatePassword(@NotNull User user, @NotNull String password, HttpServletRequest request);
+
+	OAuth getOAuthByUidAndPlatform(@NotNull User user, @NotNull OAuthPlatForm oAuthPlatForm, HttpServletRequest request);
+
+	void clearOAuthByUser(@NotNull User user, HttpServletRequest request);
 }

@@ -26,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnails;
 import okhttp3.OkHttpClient;
 import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
@@ -53,7 +54,7 @@ import static cn.watchdog.license.constant.UserConstant.*;
 @Slf4j
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 	public static final Cache<String, String> codeCache = CaffeineFactory.newBuilder().expireAfterWrite(10, TimeUnit.MINUTES).build();
-	public static final Cache<String, Long> forgetPasswordCache = CaffeineFactory.newBuilder().expireAfterWrite(30, TimeUnit.MINUTES).build();
+	public static final Cache<String, User> forgetPasswordCache = CaffeineFactory.newBuilder().expireAfterWrite(30, TimeUnit.MINUTES).build();
 	// 在UserServiceImpl类中，创建一个新的Caffeine缓存
 	private static final Cache<String, Integer> failLoginCache = CaffeineFactory.newBuilder().expireAfterWrite(30, TimeUnit.MINUTES).build();
 	private static final Cache<String, User> userCache = CaffeineFactory.newBuilder().expireAfterWrite(3, TimeUnit.SECONDS).build();
@@ -472,6 +473,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			user.setAvatar(path.toString());
 			this.updateById(user);
 		} catch (IOException e) {
+			generateDefaultAvatar(user, request);
 			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to upload avatar", request);
 		}
 	}
@@ -613,5 +615,35 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		QueryWrapper<User> queryWrapper = new QueryWrapper<>();
 		queryWrapper.eq("email", email);
 		return this.getOne(queryWrapper);
+	}
+
+	@Override
+	public void updatePassword(@NotNull User user, @NotNull String password, HttpServletRequest request) {
+		if (!password.matches("^(?![a-zA-Z]+$)(?![A-Z0-9]+$)(?![A-Z\\W_]+$)(?![a-z0-9]+$)(?![a-z\\W_]+$)(?![0-9\\W_]+$)[a-zA-Z0-9\\W_]{8,30}$")) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "密码格式错误", password, request);
+		}
+		// 判断修改的密码是否和原密码相同
+		if (PasswordUtil.checkPassword(password, user.getPassword())) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "新密码不能和原密码相同", request);
+		}
+		user.setPassword(PasswordUtil.encodePassword(password));
+		this.updateById(user);
+	}
+
+	@Override
+	public OAuth getOAuthByUidAndPlatform(@NotNull User user, @NotNull OAuthPlatForm oAuthPlatForm, HttpServletRequest request) {
+		long uid = user.getUid();
+		QueryWrapper<OAuth> oAuthQueryWrapper = new QueryWrapper<>();
+		oAuthQueryWrapper.eq("uid", uid);
+		oAuthQueryWrapper.eq("platform", oAuthPlatForm.getCode());
+		return oAuthMapper.selectOne(oAuthQueryWrapper);
+	}
+
+	@Override
+	public void clearOAuthByUser(@NotNull User user, HttpServletRequest request) {
+		long uid = user.getUid();
+		QueryWrapper<OAuth> oAuthQueryWrapper = new QueryWrapper<>();
+		oAuthQueryWrapper.eq("uid", uid);
+		oAuthMapper.delete(oAuthQueryWrapper);
 	}
 }

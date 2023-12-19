@@ -110,6 +110,21 @@ public class UserController {
 	public ResponseEntity<BaseResponse<UserVO>> userLogin(UserLoginRequest userLoginRequest, HttpServletRequest request) {
 		User user = userService.userLogin(userLoginRequest, request);
 		UserVO userVO = user.toUserVO();
+		// 获取Token
+		String token = request.getSession().getAttribute(LOGIN_TOKEN).toString();
+		userVO.setToken(token);
+		return ResultUtil.ok(userVO);
+	}
+
+	@GetMapping("/login/token")
+	public ResponseEntity<BaseResponse<UserVO>> userLoginToken(HttpServletRequest request) {
+		// 获取header里的token
+		String token = request.getHeader(LOGIN_TOKEN);
+		User user = userService.userLoginToken(token, request);
+		UserVO userVO = user.toUserVO();
+		// 获取Token
+		String t = request.getSession().getAttribute(LOGIN_TOKEN).toString();
+		userVO.setToken(t);
 		return ResultUtil.ok(userVO);
 	}
 
@@ -131,6 +146,8 @@ public class UserController {
 	public ResponseEntity<BaseResponse<UserVO>> getLoginUser(HttpServletRequest request) {
 		User user = userService.getLoginUser(request);
 		UserVO userVO = user.toUserVO();
+		String token = request.getSession().getAttribute(LOGIN_TOKEN).toString();
+		userVO.setToken(token);
 		return ResultUtil.ok(userVO);
 	}
 

@@ -13,6 +13,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface UserService extends IService<User> {
+	User userLoginToken(String token, HttpServletRequest request);
+
 	boolean userCreate(UserCreateRequest userCreateRequest, HttpServletRequest request);
 
 	boolean userAdd(User user, HttpServletRequest request);

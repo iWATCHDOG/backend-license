@@ -27,6 +27,7 @@ public class UserVO implements Serializable {
 	private Integer gender;
 	private String avatar;
 	private Integer status;
+	private String token;
 	private Date createTime;
 	private Date updateTime;
 }

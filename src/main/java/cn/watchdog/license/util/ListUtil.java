@@ -138,4 +138,8 @@ public final class ListUtil {
 		}
 		return r;
 	}
+
+	public static <T> T getRandomItem(List<T> list) {
+		return list.get((int) (Math.random() * list.size()));
+	}
 }

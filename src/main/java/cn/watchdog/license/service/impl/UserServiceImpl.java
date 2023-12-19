@@ -1,13 +1,16 @@
 package cn.watchdog.license.service.impl;
 
 import cn.watchdog.license.common.ReturnCode;
+import cn.watchdog.license.constant.CommonConstant;
 import cn.watchdog.license.exception.BusinessException;
 import cn.watchdog.license.mapper.OAuthMapper;
 import cn.watchdog.license.mapper.UserMapper;
+import cn.watchdog.license.model.dto.NotifyResponse;
 import cn.watchdog.license.model.dto.user.UserCreateRequest;
 import cn.watchdog.license.model.dto.user.UserLoginRequest;
 import cn.watchdog.license.model.entity.OAuth;
 import cn.watchdog.license.model.entity.User;
+import cn.watchdog.license.model.enums.NotifyType;
 import cn.watchdog.license.model.enums.OAuthPlatForm;
 import cn.watchdog.license.model.enums.UserStatus;
 import cn.watchdog.license.service.UserService;
@@ -55,10 +58,10 @@ import static cn.watchdog.license.constant.UserConstant.*;
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 	public static final Cache<String, String> codeCache = CaffeineFactory.newBuilder().expireAfterWrite(10, TimeUnit.MINUTES).build();
 	public static final Cache<String, User> forgetPasswordCache = CaffeineFactory.newBuilder().expireAfterWrite(30, TimeUnit.MINUTES).build();
+	public static final Cache<String, User> tokenCache = CaffeineFactory.newBuilder().expireAfterWrite(7, TimeUnit.DAYS).build();
 	// 在UserServiceImpl类中，创建一个新的Caffeine缓存
 	private static final Cache<String, Integer> failLoginCache = CaffeineFactory.newBuilder().expireAfterWrite(30, TimeUnit.MINUTES).build();
 	private static final Cache<String, User> userCache = CaffeineFactory.newBuilder().expireAfterWrite(3, TimeUnit.SECONDS).build();
-
 	@Resource
 	private OAuthMapper oAuthMapper;
 	@Resource
@@ -101,6 +104,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		return true;
 	}
 
+	@Override
+	public User userLoginToken(String token, HttpServletRequest request) {
+		if (StringUtils.isBlank(token)) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空", request);
+		}
+		User user = checkToken(token, request);
+		setLoginState(user, request);
+		return user;
+	}
 
 	@Override
 	public boolean userCreate(UserCreateRequest userCreateRequest, HttpServletRequest request) {
@@ -184,6 +196,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		}
 		// 移除登录态
 		request.getSession().removeAttribute(USER_LOGIN_STATE);
+		// 使之前的token失效
+		String token = request.getSession().getAttribute(LOGIN_TOKEN).toString();
+		tokenCache.invalidate(token);
 		return true;
 	}
 
@@ -207,6 +222,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			oAuthQueryWrapper.eq("uid", user.getUid());
 			OAuth oAuth = oAuthMapper.selectOne(oAuthQueryWrapper);
 			if (oAuth != null) {
+				// 添加通知
+				NotifyResponse notifyResponse = new NotifyResponse();
+				notifyResponse.setType(NotifyType.WARNING);
+				notifyResponse.setTitle("GitHub账号绑定失败");
+				notifyResponse.setContent("已绑定GitHub账号,请勿重复绑定");
+				CommonConstant.addNotifyResponse(request, notifyResponse);
 				throw new BusinessException(ReturnCode.OPERATION_ERROR, "已绑定GitHub账号,请勿重复绑定", request);
 			}
 			QueryWrapper<OAuth> oAuthQueryWrapper1 = new QueryWrapper<>();
@@ -214,6 +235,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			oAuthQueryWrapper1.eq("openId", id);
 			oAuth = oAuthMapper.selectOne(oAuthQueryWrapper1);
 			if (oAuth != null) {
+				// 添加通知
+				NotifyResponse notifyResponse = new NotifyResponse();
+				notifyResponse.setType(NotifyType.ERROR);
+				notifyResponse.setTitle("GitHub账号绑定失败");
+				notifyResponse.setContent("该GitHub账号已绑定其他账号");
+				CommonConstant.addNotifyResponse(request, notifyResponse);
 				throw new BusinessException(ReturnCode.OPERATION_ERROR, "该GitHub账号已绑定其他账号", request);
 			}
 			oAuth = new OAuth();
@@ -235,9 +262,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			if (user == null) {
 				throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "账户信息不存在", request);
 			}
-			checkStatus(user, request);
-			// 登录成功，设置登录态
-			request.getSession().setAttribute(USER_LOGIN_STATE, user);
+			setLoginState(user, request);
 			return user;
 		}
 		// 未绑定，创建账户
@@ -262,8 +287,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		if (!saveResult) {
 			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "添加失败，数据库错误", request);
 		}
-		// 登录成功，设置登录态
-		request.getSession().setAttribute(USER_LOGIN_STATE, user);
+		setLoginState(user, request, false);
 		return user;
 	}
 
@@ -300,10 +324,29 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			addFailLogin(account, request);
 			throw new BusinessException(ReturnCode.VALIDATION_FAILED, "密码错误", request);
 		}
-		checkStatus(user, request);
+		setLoginState(user, request);
+		return user;
+	}
+
+	public void setLoginState(User user, HttpServletRequest request, boolean check) {
+		if (check) {
+			checkStatus(user, request);
+		}
+		// 清除之前的Token
+		String oldToken = (String) request.getSession().getAttribute(LOGIN_TOKEN);
+		if (StringUtils.isNotBlank(oldToken)) {
+			tokenCache.invalidate(oldToken);
+		}
 		// 登录成功，设置登录态
 		request.getSession().setAttribute(USER_LOGIN_STATE, user);
-		return user;
+		// 生成Token
+		String token = UUID.randomUUID().toString();
+		tokenCache.put(token, user);
+		request.getSession().setAttribute(LOGIN_TOKEN, token);
+	}
+
+	public void setLoginState(User user, HttpServletRequest request) {
+		setLoginState(user, request, true);
 	}
 
 	public boolean checkIsLogin(HttpServletRequest request) {
@@ -447,6 +490,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			user.setAvatar(path.toString());
 			this.updateById(user);
 		} catch (IOException e) {
+			// 添加通知
+			NotifyResponse notifyResponse = new NotifyResponse();
+			notifyResponse.setType(NotifyType.ERROR);
+			notifyResponse.setTitle("头像下载失败");
+			notifyResponse.setContent("头像下载失败，已使用默认头像");
+			CommonConstant.addNotifyResponse(request, notifyResponse);
 			generateDefaultAvatar(user, request);
 			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to download avatar", avatarUrl, request);
 		}
@@ -473,6 +522,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			user.setAvatar(path.toString());
 			this.updateById(user);
 		} catch (IOException e) {
+			// 添加通知
+			NotifyResponse notifyResponse = new NotifyResponse();
+			notifyResponse.setType(NotifyType.ERROR);
+			notifyResponse.setTitle("头像上传失败");
+			notifyResponse.setContent("头像上传失败，已使用默认头像");
+			CommonConstant.addNotifyResponse(request, notifyResponse);
 			generateDefaultAvatar(user, request);
 			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to upload avatar", request);
 		}
@@ -515,6 +570,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			user.setAvatar(path.toString());
 			this.updateById(user);
 		} catch (IOException e) {
+			// 添加通知
+			NotifyResponse notifyResponse = new NotifyResponse();
+			notifyResponse.setType(NotifyType.ERROR);
+			notifyResponse.setTitle("头像生成失败");
+			notifyResponse.setContent("头像生成失败,请重试");
+			CommonConstant.addNotifyResponse(request, notifyResponse);
 			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "Failed to generate avatar", request);
 		}
 	}
@@ -557,7 +618,35 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		if (userStatus == UserStatus.BANNED) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "账户已禁用", status, request);
 		}
+
 		return true;
+	}
+
+	public User checkToken(String token, HttpServletRequest request) {
+		// 检查token有效性
+		User tokenUser = tokenCache.getIfPresent(token);
+		if (tokenUser == null) {
+			// 添加通知
+			NotifyResponse notifyResponse = new NotifyResponse();
+			notifyResponse.setType(NotifyType.WARNING);
+			notifyResponse.setTitle("登录状态已失效");
+			notifyResponse.setContent("登录状态已失效，请重新登录");
+			CommonConstant.addNotifyResponse(request, notifyResponse);
+			throw new BusinessException(ReturnCode.NOT_LOGIN_ERROR, "信息已过期，请重新登录", request);
+		}
+		// 检查tokenUser密码是否和数据库中的密码相同
+		String oldPass = tokenUser.getPassword();
+		tokenUser = this.getById(tokenUser.getUid());
+		if (tokenUser == null || !tokenUser.getPassword().equals(oldPass)) {
+			// 添加通知
+			NotifyResponse notifyResponse = new NotifyResponse();
+			notifyResponse.setType(NotifyType.WARNING);
+			notifyResponse.setTitle("登录状态已失效");
+			notifyResponse.setContent("登录状态已失效，请重新登录");
+			CommonConstant.addNotifyResponse(request, notifyResponse);
+			throw new BusinessException(ReturnCode.NOT_LOGIN_ERROR, "信息已过期，请重新登录", request);
+		}
+		return tokenUser;
 	}
 
 	@Override

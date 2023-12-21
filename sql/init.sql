@@ -57,6 +57,19 @@ CREATE TABLE IF NOT EXISTS `log`
     available  BOOL     DEFAULT TRUE              NOT NULL COMMENT '是否可用'
 );
 
+CREATE TABLE IF NOT EXISTS `security_log`
+(
+    id         BIGINT AUTO_INCREMENT              NOT NULL COMMENT 'id' PRIMARY KEY,
+    uid        BIGINT                             NULL COMMENT 'uid',
+    title      VARCHAR(16)                        NOT NULL COMMENT '标题',
+    types      VARCHAR(36)                        NOT NULL COMMENT '类型',
+    ip         VARCHAR(32)                        NULL COMMENT 'ip',
+    info       TEXT                               NULL COMMENT 'info',
+    createTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
+    updateTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    available  BOOL     DEFAULT TRUE              NOT NULL COMMENT '是否可用'
+);
+
 CREATE TABLE IF NOT EXISTS `orders`
 (
     outTradeNo    VARCHAR(128)                       NOT NULL COMMENT '订单号' PRIMARY KEY,

@@ -4,7 +4,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class RateLimiter {
-	private static final long MAX_REQUESTS_PER_PERIOD = 15 * 5; // 设置最大请求次数
+	private static final long MAX_REQUESTS_PER_PERIOD = 15 * 10; // 设置最大请求次数
 	private static final long PERIOD_IN_MILLIS = 15000; // 15秒
 
 	private final ConcurrentHashMap<String, RequestCounter> requestCounts = new ConcurrentHashMap<>();

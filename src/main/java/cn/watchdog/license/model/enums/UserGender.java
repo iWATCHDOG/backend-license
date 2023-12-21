@@ -7,20 +7,22 @@ public enum UserGender {
 	/**
 	 * 男
 	 */
-	MALE(1),
+	MALE(1, "男"),
 	/**
 	 * 女
 	 */
-	FEMALE(2),
+	FEMALE(2, "女"),
 	/**
 	 * 保密
 	 */
-	UNKNOWN(3);
+	UNKNOWN(3, "保密");
 
 	final int code;
+	final String name;
 
-	UserGender(int code) {
+	UserGender(int code, String name) {
 		this.code = code;
+		this.name = name;
 	}
 
 	public static UserGender valueOf(int code) {

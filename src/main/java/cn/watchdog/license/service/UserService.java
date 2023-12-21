@@ -1,5 +1,6 @@
 package cn.watchdog.license.service;
 
+import cn.watchdog.license.model.dto.user.UpdateUserPasswordRequest;
 import cn.watchdog.license.model.dto.user.UserCreateRequest;
 import cn.watchdog.license.model.dto.user.UserLoginRequest;
 import cn.watchdog.license.model.entity.OAuth;
@@ -29,8 +30,6 @@ public interface UserService extends IService<User> {
 
 	User getLoginUserIgnoreError(HttpServletRequest request);
 
-	User getLoginUserIgnoreErrorCache(HttpServletRequest request);
-
 	boolean checkDuplicates(String userName, HttpServletRequest request);
 
 	boolean checkDuplicatesIgnoreError(String userName, HttpServletRequest request);
@@ -57,7 +56,13 @@ public interface UserService extends IService<User> {
 
 	void updatePassword(@NotNull User user, @NotNull String password, HttpServletRequest request);
 
+	void updatePassword(UpdateUserPasswordRequest updateUserPasswordRequest, HttpServletRequest request);
+
 	OAuth getOAuthByUidAndPlatform(@NotNull User user, @NotNull OAuthPlatForm oAuthPlatForm, HttpServletRequest request);
 
 	void clearOAuthByUser(@NotNull User user, HttpServletRequest request);
+
+	User getUserByCache(Long uid, HttpServletRequest request);
+
+	User getByUsername(String username, HttpServletRequest request);
 }

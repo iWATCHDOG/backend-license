@@ -5,23 +5,33 @@ import cn.watchdog.license.common.BaseResponse;
 import cn.watchdog.license.common.ResultUtil;
 import cn.watchdog.license.common.ReturnCode;
 import cn.watchdog.license.common.StatusCode;
+import cn.watchdog.license.constant.CommonConstant;
 import cn.watchdog.license.exception.BusinessException;
+import cn.watchdog.license.model.dto.user.UpdateUserPasswordRequest;
 import cn.watchdog.license.model.dto.user.UpdateUserProfileRequest;
 import cn.watchdog.license.model.dto.user.UserCreateRequest;
 import cn.watchdog.license.model.dto.user.UserLoginRequest;
+import cn.watchdog.license.model.dto.user.UserSecurityLogQueryRequest;
 import cn.watchdog.license.model.entity.Permission;
+import cn.watchdog.license.model.entity.SecurityLog;
 import cn.watchdog.license.model.entity.User;
+import cn.watchdog.license.model.enums.SecurityType;
 import cn.watchdog.license.model.enums.UserGender;
 import cn.watchdog.license.model.vo.UserVO;
 import cn.watchdog.license.service.MailService;
 import cn.watchdog.license.service.PermissionService;
+import cn.watchdog.license.service.SecurityLogService;
 import cn.watchdog.license.service.UserService;
 import cn.watchdog.license.service.impl.UserServiceImpl;
+import cn.watchdog.license.util.NetUtil;
 import cn.watchdog.license.util.StringUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -51,6 +61,8 @@ public class UserController {
 	private UserService userService;
 	@Resource
 	private PermissionService permissionService;
+	@Resource
+	private SecurityLogService securityLogService;
 	@Resource
 	private MailService mailService;
 
@@ -173,12 +185,14 @@ public class UserController {
 		String username = updateUserProfileRequest.getUsername();
 		Integer gender = updateUserProfileRequest.getGender();
 		boolean update = false;
+		StringBuffer info = new StringBuffer();
 		if (StringUtils.isNotBlank(username)) {
 			if (!username.equals(user.getUsername())) {
 				if (!username.matches("^[a-zA-Z0-9_-]{1,16}$")) {
 					throw new BusinessException(ReturnCode.PARAMS_ERROR, "用户名格式错误", request);
 				}
 				update = true;
+				info.append("将用户名从").append(user.getUsername()).append("修改为").append(username);
 				user.setUsername(username);
 			}
 		}
@@ -186,14 +200,33 @@ public class UserController {
 			UserGender userGender = UserGender.valueOf(gender);
 			if (userGender.getCode() != user.getGender()) {
 				update = true;
+				if (info.isEmpty()) {
+					info.append(",");
+				}
+				info.append("将性别从").append(user.getUserGender().getName()).append("修改为").append(userGender.getName());
 				user.setGender(userGender.getCode());
 			}
-
 		}
 		if (update) {
 			userService.updateById(user);
 		}
+
+		SecurityLog securityLog = new SecurityLog();
+		securityLog.setUid(user.getUid());
+		securityLog.setTitle(user.getUsername());
+		securityLog.setTypesByList(List.of(SecurityType.UPDATE_PROFILE));
+		securityLog.setInfo(info.toString());
+		securityLog.setIp(NetUtil.getIpAddress(request));
+		securityLogService.save(securityLog);
 		return ResultUtil.ok(update);
+	}
+
+	@PostMapping("/update/password")
+	@AuthCheck()
+	public ResponseEntity<BaseResponse<Boolean>> updateUserPassword(UpdateUserPasswordRequest updateUserPasswordRequest, HttpServletRequest request) {
+		User user = userService.getLoginUser(request);
+		userService.updatePassword(updateUserPasswordRequest, request);
+		return ResultUtil.ok(true);
 	}
 
 	/**
@@ -201,7 +234,7 @@ public class UserController {
 	 */
 	@GetMapping("/get/avatar/{uid}")
 	public ResponseEntity<InputStreamResource> getAvatar(@PathVariable("uid") Long uid, HttpServletRequest request) {
-		User user = userService.getById(uid);
+		User user = userService.getUserByCache(uid, request);
 		if (user == null) {
 			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "用户不存在", uid, request);
 		}
@@ -228,11 +261,36 @@ public class UserController {
 	 */
 	@GetMapping("/get/username/{uid}")
 	public ResponseEntity<BaseResponse<String>> getUsername(@PathVariable("uid") Long uid, HttpServletRequest request) {
-		User user = userService.getById(uid);
+		User user = userService.getUserByCache(uid, request);
 		if (user == null) {
 			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "用户不存在", uid, request);
 		}
 		return ResultUtil.ok(user.getUsername());
+	}
+
+	/**
+	 * 获取公开的用户信息
+	 */
+	@GetMapping("/get/profile/{uid}")
+	public ResponseEntity<BaseResponse<UserVO>> getPublicUser(@PathVariable("uid") Long uid, HttpServletRequest request) {
+		User user = userService.getUserByCache(uid, request);
+		if (user == null) {
+			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "用户不存在", uid, request);
+		}
+		UserVO userVO = user.toUserVO();
+		userVO.setPhone(null);
+		return ResultUtil.ok(userVO);
+	}
+
+	@GetMapping("/get/profile/username/{username}")
+	public ResponseEntity<BaseResponse<UserVO>> getPublicUser(@PathVariable("username") String username, HttpServletRequest request) {
+		User user = userService.getByUsername(username, request);
+		if (user == null) {
+			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "用户不存在", username, request);
+		}
+		UserVO userVO = user.toUserVO();
+		userVO.setPhone(null);
+		return ResultUtil.ok(userVO);
 	}
 
 	/**
@@ -268,7 +326,45 @@ public class UserController {
 		User user = userService.getLoginUser(request);
 		userLogout(request);
 		userService.clearOAuthByUser(user, request);
+		SecurityLog securityLog = new SecurityLog();
+		securityLog.setUid(user.getUid());
+		securityLog.setTitle(user.getUsername());
+		securityLog.setTypesByList(List.of(SecurityType.DELETE_USER));
+		securityLog.setIp(NetUtil.getIpAddress(request));
+		securityLogService.save(securityLog);
 		userService.removeById(user);
 		return ResultUtil.ok(true);
+	}
+
+	@GetMapping("/security/log")
+	@AuthCheck()
+	public ResponseEntity<BaseResponse<Page<SecurityLog>>> getSecurityLogList(UserSecurityLogQueryRequest userSecurityLogQueryRequest, HttpServletRequest request) {
+		if (userSecurityLogQueryRequest == null) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数错误", request);
+		}
+		User user = userService.getLoginUser(request);
+		SecurityLog securityLogQuery = new SecurityLog();
+		BeanUtils.copyProperties(userSecurityLogQueryRequest, securityLogQuery);
+		long current = userSecurityLogQueryRequest.getCurrent();
+		long size = userSecurityLogQueryRequest.getPageSize();
+		String sortField = userSecurityLogQueryRequest.getSortField();
+		String sortOrder = userSecurityLogQueryRequest.getSortOrder();
+		Long id = userSecurityLogQueryRequest.getId();
+		Long uid = user.getUid();
+		// 默认以uid排序
+		if (sortField == null) {
+			sortField = "id";
+		}
+		securityLogQuery.setId(null);
+		securityLogQuery.setUid(uid);
+		// 限制爬虫
+		if (size > 100) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, request);
+		}
+		QueryWrapper<SecurityLog> queryWrapper = new QueryWrapper<>(securityLogQuery);
+		queryWrapper.like(id != null, "id", id);
+		queryWrapper.orderBy(StringUtils.isNotBlank(sortField), sortOrder.equals(CommonConstant.SORT_ORDER_ASC), sortField);
+		Page<SecurityLog> securityLogPage = securityLogService.page(new Page<>(current, size), queryWrapper);
+		return ResultUtil.ok(securityLogPage);
 	}
 }

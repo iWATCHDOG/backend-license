@@ -1,20 +1,16 @@
 package cn.watchdog.license.constant;
 
+import cn.watchdog.license.controller.RootController;
 import cn.watchdog.license.model.dto.NotifyResponse;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 通用常量
  */
 public interface CommonConstant {
-	ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(16);
-
 	List<NotifyResponse> ROOT_NOTIFY_LIST = new ArrayList<>();
 
 	/**
@@ -41,9 +37,10 @@ public interface CommonConstant {
 		if (notifyResponseList == null) {
 			notifyResponseList = new ArrayList<>();
 		}
+		long count = RootController.count++;
+		notifyResponse.setId(count);
 		notifyResponseList.add(notifyResponse);
-		List<NotifyResponse> finalNotifyResponseList = notifyResponseList;
-		scheduler.schedule(() -> request.getSession().setAttribute(NOTIFY_LIST, finalNotifyResponseList), 3, TimeUnit.SECONDS);
+		request.getSession().setAttribute(NOTIFY_LIST, notifyResponseList);
 	}
 
 	static void clearNotifyResponse(HttpServletRequest request) {

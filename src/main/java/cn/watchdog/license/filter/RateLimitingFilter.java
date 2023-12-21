@@ -23,9 +23,12 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 @Slf4j
 public class RateLimitingFilter implements Filter {
+	private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(16);
 	private final RateLimiter rateLimiter = new RateLimiter();
 	@Resource
 	private LogService logService;
@@ -72,12 +75,14 @@ public class RateLimitingFilter implements Filter {
 			l.setCost((long) -1);
 			l.setResult(null);
 			l.setHttpCode(StatusCode.TOO_MANY_REQUESTS);
-			// 当前登录用户
-			User user = userService.getLoginUserIgnoreErrorCache(httpServletRequest);
-			if (user != null) {
-				l.setUid(user.getUid());
-			}
-			logService.addLog(l, httpServletRequest);
+			scheduler.submit(() -> {
+				// 当前登录用户
+				User user = userService.getLoginUserIgnoreError(httpServletRequest);
+				if (user != null) {
+					l.setUid(user.getUid());
+				}
+				logService.addLog(l, httpServletRequest);
+			});
 			return;
 		}
 

@@ -1,10 +1,12 @@
 package cn.watchdog.license.aop;
 
 import cn.watchdog.license.common.BaseResponse;
+import cn.watchdog.license.mapper.SecurityLogMapper;
 import cn.watchdog.license.model.entity.Log;
 import cn.watchdog.license.model.entity.User;
 import cn.watchdog.license.service.LogService;
 import cn.watchdog.license.service.UserService;
+import cn.watchdog.license.util.NetUtil;
 import cn.watchdog.license.util.gson.GsonProvider;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.Cookie;
@@ -22,6 +24,8 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * 请求响应日志 AOP
@@ -30,10 +34,13 @@ import java.util.UUID;
 @Component
 @Slf4j
 public class LogInterceptor {
+	private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(16);
 	@Resource
 	private LogService logService;
 	@Resource
 	private UserService userService;
+	@Resource
+	private SecurityLogMapper securityLogMapper;
 
 	/**
 	 * 执行拦截
@@ -52,7 +59,7 @@ public class LogInterceptor {
 		// 获取请求方法
 		String method = request.getMethod();
 		// 获取ip
-		String ip = request.getRemoteAddr();
+		String ip = NetUtil.getIpAddress(request);
 		// 生成请求唯一 id
 		String requestId = UUID.randomUUID().toString();
 		String url = request.getRequestURI();
@@ -97,11 +104,13 @@ public class LogInterceptor {
 		} catch (Throwable ignored) {
 		}
 		// 当前登录用户
-		User user = userService.getLoginUserIgnoreErrorCache(request);
-		if (user != null) {
-			l.setUid(user.getUid());
-		}
-		logService.addLog(l, request);
+		scheduler.submit(() -> {
+			User user = userService.getLoginUserIgnoreError(request);
+			if (user != null) {
+				l.setUid(user.getUid());
+			}
+			logService.addLog(l, request);
+		});
 		return result;
 	}
 }

@@ -2,6 +2,7 @@ package cn.watchdog.license.exception;
 
 
 import cn.watchdog.license.common.ReturnCode;
+import cn.watchdog.license.util.NetUtil;
 import cn.watchdog.license.util.gson.GsonProvider;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -90,7 +91,7 @@ public class BusinessException extends RuntimeException {
 			this.cookies = request.getCookies();
 			this.params = GsonProvider.normal().toJson(request.getParameterMap());
 			this.userAgent = request.getHeader("User-Agent");
-			this.ip = request.getRemoteAddr();
+			this.ip = NetUtil.getIpAddress(request);
 		}
 	}
 }

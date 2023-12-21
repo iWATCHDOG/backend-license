@@ -6,13 +6,17 @@ import cn.watchdog.license.exception.BusinessException;
 import cn.watchdog.license.mapper.OAuthMapper;
 import cn.watchdog.license.mapper.UserMapper;
 import cn.watchdog.license.model.dto.NotifyResponse;
+import cn.watchdog.license.model.dto.user.UpdateUserPasswordRequest;
 import cn.watchdog.license.model.dto.user.UserCreateRequest;
 import cn.watchdog.license.model.dto.user.UserLoginRequest;
 import cn.watchdog.license.model.entity.OAuth;
+import cn.watchdog.license.model.entity.SecurityLog;
 import cn.watchdog.license.model.entity.User;
 import cn.watchdog.license.model.enums.NotifyType;
 import cn.watchdog.license.model.enums.OAuthPlatForm;
+import cn.watchdog.license.model.enums.SecurityType;
 import cn.watchdog.license.model.enums.UserStatus;
+import cn.watchdog.license.service.SecurityLogService;
 import cn.watchdog.license.service.UserService;
 import cn.watchdog.license.util.CaffeineFactory;
 import cn.watchdog.license.util.NetUtil;
@@ -46,6 +50,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
@@ -61,9 +66,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 	public static final Cache<String, User> tokenCache = CaffeineFactory.newBuilder().expireAfterWrite(7, TimeUnit.DAYS).build();
 	// 在UserServiceImpl类中，创建一个新的Caffeine缓存
 	private static final Cache<String, Integer> failLoginCache = CaffeineFactory.newBuilder().expireAfterWrite(30, TimeUnit.MINUTES).build();
-	private static final Cache<String, User> userCache = CaffeineFactory.newBuilder().expireAfterWrite(3, TimeUnit.SECONDS).build();
+	private static final Cache<Long, User> userCache = CaffeineFactory.newBuilder().expireAfterWrite(3, TimeUnit.SECONDS).build();
 	@Resource
 	private OAuthMapper oAuthMapper;
+	@Resource
+	private SecurityLogService securityLogService;
 	@Resource
 	private JdbcTemplate jdbcTemplate;
 
@@ -101,6 +108,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "添加失败，数据库错误", request);
 		}
 		generateDefaultAvatar(user, request);
+		SecurityLog securityLog = new SecurityLog();
+		securityLog.setUid(user.getUid());
+		securityLog.setTitle(user.getUsername());
+		List<SecurityType> st = List.of(SecurityType.ADD_ACCOUNT);
+		securityLog.setTypesByList(st);
+		securityLog.setIp(NetUtil.getIpAddress(request));
+		securityLogService.save(securityLog);
 		return true;
 	}
 
@@ -166,6 +180,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "添加失败，数据库错误", request);
 		}
 		generateDefaultAvatar(user, request);
+		SecurityLog securityLog = new SecurityLog();
+		securityLog.setUid(user.getUid());
+		securityLog.setTitle(user.getUsername());
+		List<SecurityType> st = List.of(SecurityType.ADD_ACCOUNT);
+		securityLog.setTypesByList(st);
+		securityLog.setIp(NetUtil.getIpAddress(request));
+		securityLogService.save(securityLog);
 		return true;
 	}
 
@@ -252,6 +273,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			if (!saveResult) {
 				throw new BusinessException(ReturnCode.SYSTEM_ERROR, "添加失败，数据库错误", request);
 			}
+			SecurityLog securityLog = new SecurityLog();
+			securityLog.setUid(user.getUid());
+			securityLog.setTitle(user.getUsername());
+			List<SecurityType> st = List.of(SecurityType.BIND_GITHUB);
+			securityLog.setTypesByList(st);
+			securityLog.setIp(NetUtil.getIpAddress(request));
+			securityLog.setInfo("GitHub ID: " + id);
+			securityLogService.save(securityLog);
 			return user;
 		}
 		oAuthQueryWrapper.eq("openId", id);
@@ -288,6 +317,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "添加失败，数据库错误", request);
 		}
 		setLoginState(user, request, false);
+		SecurityLog securityLog = new SecurityLog();
+		securityLog.setUid(user.getUid());
+		securityLog.setTitle(user.getUsername());
+		List<SecurityType> st = List.of(SecurityType.ADD_ACCOUNT, SecurityType.BIND_GITHUB);
+		securityLog.setTypesByList(st);
+		securityLog.setIp(NetUtil.getIpAddress(request));
+		securityLog.setInfo("GitHub ID: " + id);
+		securityLogService.save(securityLog);
 		return user;
 	}
 
@@ -366,7 +403,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		// 先判断是否已登录
 		Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
 		User currentUser = (User) userObj;
-		log.warn("currentUser: {}", currentUser);
 		if (currentUser == null || currentUser.getUid() == null) {
 			throw new BusinessException(ReturnCode.NOT_LOGIN_ERROR, "未登录", request);
 		}
@@ -388,30 +424,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			return getLoginUser(request);
 		} catch (Exception e) {
 			return null;
-		}
-	}
-
-	@Override
-	public User getLoginUserIgnoreErrorCache(HttpServletRequest request) {
-		String ip = NetUtil.getIpAddress(request);
-		User user = userCache.getIfPresent(ip);
-		if (user != null) {
-			refreshLoginUserCache(request);
-			return user;
-		}
-		user = getLoginUserIgnoreError(request);
-		if (user != null) {
-			userCache.put(ip, user);
-		}
-		return user;
-	}
-
-	@Async
-	public void refreshLoginUserCache(HttpServletRequest request) {
-		String ip = NetUtil.getIpAddress(request);
-		User user = getLoginUserIgnoreError(request);
-		if (user != null) {
-			userCache.put(ip, user);
 		}
 	}
 
@@ -489,6 +501,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			Files.copy(inputStream, path, StandardCopyOption.REPLACE_EXISTING);
 			user.setAvatar(path.toString());
 			this.updateById(user);
+			userCache.invalidate(user.getUid());
 		} catch (IOException e) {
 			// 添加通知
 			NotifyResponse notifyResponse = new NotifyResponse();
@@ -521,6 +534,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			Files.write(path, bytes);
 			user.setAvatar(path.toString());
 			this.updateById(user);
+			userCache.invalidate(user.getUid());
 		} catch (IOException e) {
 			// 添加通知
 			NotifyResponse notifyResponse = new NotifyResponse();
@@ -531,6 +545,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			generateDefaultAvatar(user, request);
 			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to upload avatar", request);
 		}
+		SecurityLog securityLog = new SecurityLog();
+		securityLog.setUid(user.getUid());
+		securityLog.setTitle(user.getUsername());
+		List<SecurityType> st = List.of(SecurityType.CHANGE_AVATAR);
+		securityLog.setTypesByList(st);
+		securityLog.setIp(NetUtil.getIpAddress(request));
+		securityLogService.save(securityLog);
 	}
 
 	@Override
@@ -569,6 +590,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			ImageIO.write(image, "png", path.toFile());
 			user.setAvatar(path.toString());
 			this.updateById(user);
+			userCache.invalidate(user.getUid());
 		} catch (IOException e) {
 			// 添加通知
 			NotifyResponse notifyResponse = new NotifyResponse();
@@ -596,6 +618,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		if (oAuth == null) {
 			throw new BusinessException(ReturnCode.OPERATION_ERROR, "未绑定该账号", request);
 		}
+		SecurityLog securityLog = new SecurityLog();
+		securityLog.setUid(user.getUid());
+		securityLog.setTitle(user.getUsername());
+		if (oAuthPlatForm == OAuthPlatForm.GITHUB) {
+			securityLog.setTypesByList(List.of(SecurityType.UNBIND_GITHUB));
+		}
+		securityLog.setInfo(String.valueOf(oAuth.getOpenId()));
+		securityLog.setInfo(oAuthPlatForm.getName() + " ID" + oAuth.getOpenId());
+		securityLog.setIp(NetUtil.getIpAddress(request));
+		securityLogService.save(securityLog);
 		oAuthMapper.deleteById(oAuth.getId());
 	}
 
@@ -717,6 +749,57 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		}
 		user.setPassword(PasswordUtil.encodePassword(password));
 		this.updateById(user);
+		userCache.invalidate(user.getUid());
+		SecurityLog securityLog = new SecurityLog();
+		securityLog.setUid(user.getUid());
+		securityLog.setTitle(user.getUsername());
+		securityLog.setTypesByList(List.of(SecurityType.CHANGE_PASSWORD_FORGET));
+		securityLog.setIp(NetUtil.getIpAddress(request));
+		securityLogService.save(securityLog);
+	}
+
+	@Override
+	public void updatePassword(UpdateUserPasswordRequest updateUserPasswordRequest, HttpServletRequest request) {
+		if (updateUserPasswordRequest == null) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空", request);
+		}
+		String oldPassword = updateUserPasswordRequest.getOldPassword();
+		String newPassword = updateUserPasswordRequest.getNewPassword();
+		if (StringUtils.isAnyBlank(oldPassword, newPassword)) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空", request);
+		}
+		if (!newPassword.matches("^(?![a-zA-Z]+$)(?![A-Z0-9]+$)(?![A-Z\\W_]+$)(?![a-z0-9]+$)(?![a-z\\W_]+$)(?![0-9\\W_]+$)[a-zA-Z0-9\\W_]{8,30}$")) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "密码格式错误", newPassword, request);
+		}
+		User user = getLoginUser(request);
+		if (!PasswordUtil.checkPassword(oldPassword, user.getPassword())) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "原密码错误", request);
+		}
+		// 判断修改的密码是否和原密码相同
+		if (PasswordUtil.checkPassword(newPassword, user.getPassword())) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "新密码不能和原密码相同", request);
+		}
+		user.setPassword(PasswordUtil.encodePassword(newPassword));
+		this.updateById(user);
+		userCache.invalidate(user.getUid());
+		// 使之前的token失效
+		String token = request.getSession().getAttribute(LOGIN_TOKEN).toString();
+		tokenCache.invalidate(token);
+		// 使之前的登录态失效
+		request.getSession().removeAttribute(USER_LOGIN_STATE);
+		request.getSession().removeAttribute(LOGIN_TOKEN);
+		// 添加通知
+		NotifyResponse notifyResponse = new NotifyResponse();
+		notifyResponse.setType(NotifyType.WARNING);
+		notifyResponse.setTitle("登录状态已失效");
+		notifyResponse.setContent("登录状态已失效，请重新登录");
+		CommonConstant.addNotifyResponse(request, notifyResponse);
+		SecurityLog securityLog = new SecurityLog();
+		securityLog.setUid(user.getUid());
+		securityLog.setTitle(user.getUsername());
+		securityLog.setTypesByList(List.of(SecurityType.CHANGE_PASSWORD));
+		securityLog.setIp(NetUtil.getIpAddress(request));
+		securityLogService.save(securityLog);
 	}
 
 	@Override
@@ -734,5 +817,30 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		QueryWrapper<OAuth> oAuthQueryWrapper = new QueryWrapper<>();
 		oAuthQueryWrapper.eq("uid", uid);
 		oAuthMapper.delete(oAuthQueryWrapper);
+	}
+
+	@Override
+	public User getUserByCache(Long uid, HttpServletRequest request) {
+		if (uid == null) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空", request);
+		}
+		User user = userCache.getIfPresent(uid);
+		if (user == null) {
+			user = this.getById(uid);
+			if (user != null) {
+				userCache.put(uid, user);
+			}
+		}
+		return user;
+	}
+
+	@Override
+	public User getByUsername(String username, HttpServletRequest request) {
+		if (StringUtils.isBlank(username)) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空", request);
+		}
+		QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+		queryWrapper.eq("username", username);
+		return this.getOne(queryWrapper);
 	}
 }

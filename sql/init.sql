@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS `security_log`
 (
     id         BIGINT AUTO_INCREMENT              NOT NULL COMMENT 'id' PRIMARY KEY,
     uid        BIGINT                             NULL COMMENT 'uid',
-    title      VARCHAR(16)                        NOT NULL COMMENT '标题',
+    title      VARCHAR(32)                        NOT NULL COMMENT '标题',
     types      VARCHAR(36)                        NOT NULL COMMENT '类型',
     ip         VARCHAR(32)                        NULL COMMENT 'ip',
     info       TEXT                               NULL COMMENT 'info',

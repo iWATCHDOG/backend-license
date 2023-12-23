@@ -6,6 +6,7 @@ import cn.watchdog.license.common.ResultUtil;
 import cn.watchdog.license.common.ReturnCode;
 import cn.watchdog.license.constant.CommonConstant;
 import cn.watchdog.license.exception.BusinessException;
+import cn.watchdog.license.model.dto.LogQueryRequest;
 import cn.watchdog.license.model.dto.permission.PermissionAddRequest;
 import cn.watchdog.license.model.dto.permission.PermissionRemoveRequest;
 import cn.watchdog.license.model.dto.user.UserQueryRequest;
@@ -15,6 +16,7 @@ import cn.watchdog.license.model.enums.UserStatus;
 import cn.watchdog.license.model.vo.UserVO;
 import cn.watchdog.license.service.LogService;
 import cn.watchdog.license.service.PermissionService;
+import cn.watchdog.license.service.SecurityLogService;
 import cn.watchdog.license.service.UserService;
 import cn.watchdog.license.util.PasswordUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -46,6 +48,8 @@ public class AdminController {
 	private PermissionService permissionService;
 	@Resource
 	private LogService logService;
+	@Resource
+	private SecurityLogService securityLogService;
 
 	@PostMapping("/user/add")
 	@AuthCheck(must = "*")
@@ -101,6 +105,49 @@ public class AdminController {
 		user.setStatus(userStatus.getCode());
 		userService.updateById(user);
 		return ResultUtil.ok(true);
+	}
+
+	/**
+	 * 分页获取Log列表
+	 */
+	@GetMapping("/log/list")
+	@AuthCheck(must = "*")
+	public ResponseEntity<BaseResponse<Page<Log>>> getLogListPage(LogQueryRequest logQueryRequest, HttpServletRequest request) {
+		if (logQueryRequest == null) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数错误", request);
+		}
+		Log logQuery = new Log();
+		BeanUtils.copyProperties(logQueryRequest, logQuery);
+		long current = logQueryRequest.getCurrent();
+		long size = logQueryRequest.getPageSize();
+		String sortField = logQueryRequest.getSortField();
+		String sortOrder = logQueryRequest.getSortOrder();
+		Long id = logQueryRequest.getId();
+		Long uid = logQueryRequest.getUid();
+		String requestId = logQueryRequest.getRequestId();
+		String ip = logQueryRequest.getIp();
+		// 默认以id排序
+		if (sortField == null) {
+			sortField = "id";
+		}
+		// 限制爬虫
+		if (size > 100) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, request);
+		}
+
+		// 支持模糊搜索
+		logQuery.setId(null);
+		logQuery.setUid(null);
+		logQuery.setRequestId(null);
+		logQuery.setIp(null);
+		QueryWrapper<Log> queryWrapper = new QueryWrapper<>(logQuery);
+		queryWrapper.eq(id != null, "id", id);
+		queryWrapper.eq(uid != null, "uid", uid);
+		queryWrapper.like(StringUtils.isNotBlank(requestId), "requestId", requestId);
+		queryWrapper.like(StringUtils.isNotBlank(ip), "ip", ip);
+		queryWrapper.orderBy(StringUtils.isNotBlank(sortField), sortOrder.equals(CommonConstant.SORT_ORDER_ASC), sortField);
+		Page<Log> logPage = logService.page(new Page<>(current, size), queryWrapper);
+		return ResultUtil.ok(logPage);
 	}
 
 	/**
@@ -177,5 +224,26 @@ public class AdminController {
 	public ResponseEntity<BaseResponse<Log>> getLog(@PathVariable("requestId") String requestId, HttpServletRequest request) {
 		Log l = logService.getLog(requestId, request);
 		return ResultUtil.ok(l);
+	}
+
+	@GetMapping("/count/user")
+	@AuthCheck(must = "*")
+	public ResponseEntity<BaseResponse<Long>> countUser(HttpServletRequest request) {
+		long count = userService.count();
+		return ResultUtil.ok(count);
+	}
+
+	@GetMapping("/count/log")
+	@AuthCheck(must = "*")
+	public ResponseEntity<BaseResponse<Long>> countLog(HttpServletRequest request) {
+		long count = logService.count();
+		return ResultUtil.ok(count);
+	}
+
+	@GetMapping("/count/security")
+	@AuthCheck(must = "*")
+	public ResponseEntity<BaseResponse<Long>> countSecurityLog(HttpServletRequest request) {
+		long count = securityLogService.count();
+		return ResultUtil.ok(count);
 	}
 }

@@ -125,6 +125,9 @@ public class UserController {
 		// 获取Token
 		String token = request.getSession().getAttribute(LOGIN_TOKEN).toString();
 		userVO.setToken(token);
+		long uid = user.getUid();
+		Permission ret = permissionService.getMaxPriorityGroupP(uid);
+		userVO.setGroup(ret);
 		return ResultUtil.ok(userVO);
 	}
 
@@ -137,6 +140,9 @@ public class UserController {
 		// 获取Token
 		String t = request.getSession().getAttribute(LOGIN_TOKEN).toString();
 		userVO.setToken(t);
+		long uid = user.getUid();
+		Permission ret = permissionService.getMaxPriorityGroupP(uid);
+		userVO.setGroup(ret);
 		return ResultUtil.ok(userVO);
 	}
 
@@ -160,6 +166,9 @@ public class UserController {
 		UserVO userVO = user.toUserVO();
 		String token = request.getSession().getAttribute(LOGIN_TOKEN).toString();
 		userVO.setToken(token);
+		long uid = user.getUid();
+		Permission ret = permissionService.getMaxPriorityGroupP(uid);
+		userVO.setGroup(ret);
 		return ResultUtil.ok(userVO);
 	}
 
@@ -185,7 +194,8 @@ public class UserController {
 		String username = updateUserProfileRequest.getUsername();
 		Integer gender = updateUserProfileRequest.getGender();
 		boolean update = false;
-		StringBuffer info = new StringBuffer();
+		SecurityLog securityLog = new SecurityLog();
+		StringBuilder info = new StringBuilder();
 		if (StringUtils.isNotBlank(username)) {
 			if (!username.equals(user.getUsername())) {
 				if (!username.matches("^[a-zA-Z0-9_-]{1,16}$")) {
@@ -200,7 +210,7 @@ public class UserController {
 			UserGender userGender = UserGender.valueOf(gender);
 			if (userGender.getCode() != user.getGender()) {
 				update = true;
-				if (info.isEmpty()) {
+				if (!info.isEmpty()) {
 					info.append(",");
 				}
 				info.append("将性别从").append(user.getUserGender().getName()).append("修改为").append(userGender.getName());
@@ -208,16 +218,14 @@ public class UserController {
 			}
 		}
 		if (update) {
+			securityLog.setInfo(info.toString());
+			securityLog.setUid(user.getUid());
+			securityLog.setTitle(user.getUsername());
+			securityLog.setTypesByList(List.of(SecurityType.UPDATE_PROFILE));
+			securityLog.setIp(NetUtil.getIpAddress(request));
+			securityLogService.save(securityLog);
 			userService.updateById(user);
 		}
-
-		SecurityLog securityLog = new SecurityLog();
-		securityLog.setUid(user.getUid());
-		securityLog.setTitle(user.getUsername());
-		securityLog.setTypesByList(List.of(SecurityType.UPDATE_PROFILE));
-		securityLog.setInfo(info.toString());
-		securityLog.setIp(NetUtil.getIpAddress(request));
-		securityLogService.save(securityLog);
 		return ResultUtil.ok(update);
 	}
 

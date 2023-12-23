@@ -1,5 +1,6 @@
 package cn.watchdog.license.model.vo;
 
+import cn.watchdog.license.model.entity.Permission;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -28,6 +29,7 @@ public class UserVO implements Serializable {
 	private String avatar;
 	private Integer status;
 	private String token;
+	private Permission group;
 	private Date createTime;
 	private Date updateTime;
 }

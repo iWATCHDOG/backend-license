@@ -103,14 +103,11 @@ public class LogInterceptor {
 			}
 		} catch (Throwable ignored) {
 		}
-		// 当前登录用户
-		scheduler.submit(() -> {
-			User user = userService.getLoginUserIgnoreError(request);
-			if (user != null) {
-				l.setUid(user.getUid());
-			}
-			logService.addLog(l, request);
-		});
+		User user = userService.getLoginUserIgnoreError(request);
+		if (user != null) {
+			l.setUid(user.getUid());
+		}
+		logService.addLog(l, request);
 		return result;
 	}
 }

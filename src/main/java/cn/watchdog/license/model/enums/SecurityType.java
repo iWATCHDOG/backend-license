@@ -35,7 +35,11 @@ public enum SecurityType {
 	/**
 	 * 注销账号
 	 */
-	DELETE_USER(401);
+	DELETE_USER(401),
+	/**
+	 * 管理操作
+	 */
+	ADMIN_OPERATION(500);
 
 	final int code;
 

@@ -11,13 +11,17 @@ import cn.watchdog.license.model.dto.permission.PermissionAddRequest;
 import cn.watchdog.license.model.dto.permission.PermissionRemoveRequest;
 import cn.watchdog.license.model.dto.user.UserQueryRequest;
 import cn.watchdog.license.model.entity.Log;
+import cn.watchdog.license.model.entity.Permission;
+import cn.watchdog.license.model.entity.SecurityLog;
 import cn.watchdog.license.model.entity.User;
+import cn.watchdog.license.model.enums.SecurityType;
 import cn.watchdog.license.model.enums.UserStatus;
 import cn.watchdog.license.model.vo.UserVO;
 import cn.watchdog.license.service.LogService;
 import cn.watchdog.license.service.PermissionService;
 import cn.watchdog.license.service.SecurityLogService;
 import cn.watchdog.license.service.UserService;
+import cn.watchdog.license.util.NetUtil;
 import cn.watchdog.license.util.PasswordUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -58,7 +62,23 @@ public class AdminController {
 		user.setCreateTime(null);
 		user.setUpdateTime(null);
 		user.setAvailable(null);
-		return ResultUtil.ok(userService.userAdd(user, request));
+		boolean save = userService.userAdd(user, request);
+		if (save) {
+			User cu = userService.getLoginUser(request);
+			SecurityLog securityLog = new SecurityLog();
+			securityLog.setUid(cu.getUid());
+			securityLog.setTitle("[管理员] " + cu.getUsername());
+			securityLog.setTypesByList(List.of(SecurityType.ADD_ACCOUNT, SecurityType.ADMIN_OPERATION));
+			String info = "添加用户：" + user.getUsername() +
+					", 密码：" + user.getPassword() +
+					"，邮箱：" + user.getEmail() +
+					"，手机号：" + user.getPhone() +
+					"，状态：" + UserStatus.valueOf(user.getStatus()).getDesc();
+			securityLog.setInfo(info);
+			securityLog.setIp(NetUtil.getIpAddress(request));
+			securityLogService.save(securityLog);
+		}
+		return ResultUtil.ok(save);
 	}
 
 	/**
@@ -73,22 +93,48 @@ public class AdminController {
 		}
 		String encodePassword = PasswordUtil.encodePassword(password);
 		user.setPassword(encodePassword);
-		userService.updateById(user);
-		return ResultUtil.ok(true);
+		boolean save = userService.updateById(user);
+		if (save) {
+			User cu = userService.getLoginUser(request);
+			SecurityLog securityLog = new SecurityLog();
+			securityLog.setUid(cu.getUid());
+			securityLog.setTitle("[管理员] " + cu.getUsername());
+			securityLog.setTypesByList(List.of(SecurityType.CHANGE_PASSWORD, SecurityType.ADMIN_OPERATION));
+			String info = "重置用户密码：" + user.getUsername() +
+					"，新密码：" + password;
+			securityLog.setInfo(info);
+			securityLog.setIp(NetUtil.getIpAddress(request));
+			securityLogService.save(securityLog);
+		}
+		return ResultUtil.ok(save);
 	}
 
 	/**
 	 * 删除用户
 	 */
-	@DeleteMapping("/user/remove/{uid}")
+	@DeleteMapping("/user/{uid}")
 	@AuthCheck(must = "*")
 	public ResponseEntity<BaseResponse<Boolean>> userRemove(@PathVariable("uid") Long uid, HttpServletRequest request) {
 		User user = userService.getById(uid);
 		if (user == null) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "用户不存在", uid, request);
 		}
-		userService.removeById(uid);
-		return ResultUtil.ok(true);
+		userService.clearOAuthByUser(user, request);
+		user.setUserStatus(UserStatus.DELETED);
+		userService.save(user);
+		boolean save = userService.removeById(uid);
+		if (save) {
+			User cu = userService.getLoginUser(request);
+			SecurityLog securityLog = new SecurityLog();
+			securityLog.setUid(cu.getUid());
+			securityLog.setTitle("[管理员] " + cu.getUsername());
+			securityLog.setTypesByList(List.of(SecurityType.DELETE_USER, SecurityType.ADMIN_OPERATION));
+			String info = "删除用户：" + user.getUsername();
+			securityLog.setInfo(info);
+			securityLog.setIp(NetUtil.getIpAddress(request));
+			securityLogService.save(securityLog);
+		}
+		return ResultUtil.ok(save);
 	}
 
 	/**
@@ -103,8 +149,20 @@ public class AdminController {
 		}
 		UserStatus userStatus = UserStatus.valueOf(status);
 		user.setStatus(userStatus.getCode());
-		userService.updateById(user);
-		return ResultUtil.ok(true);
+		boolean save = userService.updateById(user);
+		if (save) {
+			User cu = userService.getLoginUser(request);
+			SecurityLog securityLog = new SecurityLog();
+			securityLog.setUid(cu.getUid());
+			securityLog.setTitle("[管理员] " + cu.getUsername());
+			securityLog.setTypesByList(List.of(SecurityType.UPDATE_PROFILE, SecurityType.ADMIN_OPERATION));
+			String info = "设置用户状态：" + user.getUsername() +
+					"，状态：" + userStatus.getDesc();
+			securityLog.setInfo(info);
+			securityLog.setIp(NetUtil.getIpAddress(request));
+			securityLogService.save(securityLog);
+		}
+		return ResultUtil.ok(save);
 	}
 
 	/**
@@ -122,8 +180,6 @@ public class AdminController {
 		long size = logQueryRequest.getPageSize();
 		String sortField = logQueryRequest.getSortField();
 		String sortOrder = logQueryRequest.getSortOrder();
-		Long id = logQueryRequest.getId();
-		Long uid = logQueryRequest.getUid();
 		String requestId = logQueryRequest.getRequestId();
 		String ip = logQueryRequest.getIp();
 		// 默认以id排序
@@ -136,24 +192,27 @@ public class AdminController {
 		}
 
 		// 支持模糊搜索
-		logQuery.setId(null);
-		logQuery.setUid(null);
 		logQuery.setRequestId(null);
 		logQuery.setIp(null);
 		QueryWrapper<Log> queryWrapper = new QueryWrapper<>(logQuery);
-		queryWrapper.eq(id != null, "id", id);
-		queryWrapper.eq(uid != null, "uid", uid);
 		queryWrapper.like(StringUtils.isNotBlank(requestId), "requestId", requestId);
 		queryWrapper.like(StringUtils.isNotBlank(ip), "ip", ip);
 		queryWrapper.orderBy(StringUtils.isNotBlank(sortField), sortOrder.equals(CommonConstant.SORT_ORDER_ASC), sortField);
 		Page<Log> logPage = logService.page(new Page<>(current, size), queryWrapper);
-		return ResultUtil.ok(logPage);
+		Page<Log> ret = new PageDTO<>(logPage.getCurrent(), logPage.getSize(), logPage.getTotal());
+		List<Log> records = logPage.getRecords().stream().peek(l -> {
+			l.setParams(null);
+			l.setCookies(null);
+			l.setResult(null);
+		}).toList();
+		ret.setRecords(records);
+		return ResultUtil.ok(ret);
 	}
 
 	/**
 	 * 分页获取用户列表
 	 */
-	@GetMapping("/user/list/page")
+	@GetMapping("/user/list")
 	@AuthCheck(must = "*")
 	public ResponseEntity<BaseResponse<Page<UserVO>>> getUserListPage(UserQueryRequest userQueryRequest, HttpServletRequest request) {
 		if (userQueryRequest == null) {
@@ -190,6 +249,9 @@ public class AdminController {
 		List<UserVO> userVOList = userPage.getRecords().stream().map(user -> {
 			UserVO userVO = new UserVO();
 			BeanUtils.copyProperties(user, userVO);
+			long uid = user.getUid();
+			Permission ret = permissionService.getMaxPriorityGroupP(uid);
+			userVO.setGroup(ret);
 			return userVO;
 		}).collect(Collectors.toList());
 		userVOPage.setRecords(userVOList);

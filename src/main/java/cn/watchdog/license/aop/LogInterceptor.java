@@ -86,6 +86,7 @@ public class LogInterceptor {
 		long totalTimeMillis = stopWatch.getTotalTimeMillis();
 		log.info("request end, id: {}, cost: {}ms", requestId, totalTimeMillis);
 		l.setCost(totalTimeMillis);
+		boolean saveLog = true;
 		try {
 			if (result instanceof ResponseEntity) {
 				ResponseEntity<BaseResponse<Object>> responseEntity = (ResponseEntity<BaseResponse<Object>>) result;
@@ -96,6 +97,9 @@ public class LogInterceptor {
 					requestInfo.setTimestamp(time);
 					requestInfo.setCost(totalTimeMillis);
 					baseResponse.setRequestInfo(requestInfo);
+					if (baseResponse.getData().equals("pong")) {
+						saveLog = false;
+					}
 				}
 				String resultStr = GsonProvider.normal().toJson(result);
 				l.setResult(resultStr);
@@ -103,11 +107,13 @@ public class LogInterceptor {
 			}
 		} catch (Throwable ignored) {
 		}
-		User user = userService.getLoginUserIgnoreError(request);
-		if (user != null) {
-			l.setUid(user.getUid());
+		if (saveLog) {
+			User user = userService.getLoginUserIgnoreError(request);
+			if (user != null) {
+				l.setUid(user.getUid());
+			}
+			logService.addLog(l, request);
 		}
-		logService.addLog(l, request);
 		return result;
 	}
 }

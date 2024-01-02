@@ -17,6 +17,7 @@ import cn.watchdog.license.model.entity.SecurityLog;
 import cn.watchdog.license.model.entity.User;
 import cn.watchdog.license.model.enums.SecurityType;
 import cn.watchdog.license.model.enums.UserGender;
+import cn.watchdog.license.model.enums.UserStatus;
 import cn.watchdog.license.model.vo.UserVO;
 import cn.watchdog.license.service.MailService;
 import cn.watchdog.license.service.PermissionService;
@@ -340,7 +341,9 @@ public class UserController {
 		securityLog.setTypesByList(List.of(SecurityType.DELETE_USER));
 		securityLog.setIp(NetUtil.getIpAddress(request));
 		securityLogService.save(securityLog);
-		userService.removeById(user);
+		user.setUserStatus(UserStatus.DELETED);
+		userService.save(user);
+		// userService.removeById(user);
 		return ResultUtil.ok(true);
 	}
 
@@ -358,7 +361,22 @@ public class UserController {
 		String sortField = userSecurityLogQueryRequest.getSortField();
 		String sortOrder = userSecurityLogQueryRequest.getSortOrder();
 		Long id = userSecurityLogQueryRequest.getId();
-		Long uid = user.getUid();
+		Long uid = userSecurityLogQueryRequest.getUid();
+		// 如果有uid参数，查询是否有权限*
+		boolean e = permissionService.checkPermission(user.getUid(), "*");
+		if (uid != null) {
+			if (!uid.equals(user.getUid())) {
+				// 如果不是查询自己的日志，需要权限
+				if (!e) {
+					// 没有权限
+					uid = user.getUid();
+				}
+			}
+		} else {
+			if (!e) {
+				uid = user.getUid();
+			}
+		}
 		// 默认以uid排序
 		if (sortField == null) {
 			sortField = "id";
@@ -371,6 +389,7 @@ public class UserController {
 		}
 		QueryWrapper<SecurityLog> queryWrapper = new QueryWrapper<>(securityLogQuery);
 		queryWrapper.like(id != null, "id", id);
+		queryWrapper.eq(uid != null, "uid", uid);
 		queryWrapper.orderBy(StringUtils.isNotBlank(sortField), sortOrder.equals(CommonConstant.SORT_ORDER_ASC), sortField);
 		Page<SecurityLog> securityLogPage = securityLogService.page(new Page<>(current, size), queryWrapper);
 		return ResultUtil.ok(securityLogPage);

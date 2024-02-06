@@ -1,17 +1,19 @@
-package cn.watchdog.license.model.vo;
+package cn.watchdog.license.model.dto.permission;
 
-import cn.watchdog.license.model.entity.Permission;
+import cn.watchdog.license.common.PageRequest;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.Date;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
-public class UserVO implements Serializable {
+public class PermissionQueryRequest extends PageRequest implements Serializable {
 	@Serial
 	@TableField(exist = false)
 	private static final long serialVersionUID = 1L;
@@ -19,15 +21,10 @@ public class UserVO implements Serializable {
 	 * id
 	 */
 	@TableId(type = IdType.AUTO)
+	private Long id;
 	private Long uid;
-	private String username;
-	private String email;
-	private String phone;
-	private Integer gender;
-	private String avatar;
-	private Integer status;
-	private String token;
-	private Permission group;
+	private String permission;
+	private Long expiry;
 	private Date createTime;
 	private Date updateTime;
 }

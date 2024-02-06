@@ -17,15 +17,17 @@ public interface PermissionService extends IService<Permission> {
 
 	Permission getPermission(long uid, String permission);
 
-	void addPermission(long uid, String permission, long expiry, HttpServletRequest request);
+	void addPermission(long uid, String permission, long expiry, boolean admin, HttpServletRequest request);
 
-	void addPermission(PermissionAddRequest permissionAddRequest, HttpServletRequest request);
+	void addPermission(PermissionAddRequest permissionAddRequest, boolean admin, HttpServletRequest request);
 
-	void removePermission(long uid, String permission);
+	void removePermission(long uid, String permission, boolean admin, HttpServletRequest request);
 
-	void removePermission(PermissionRemoveRequest permissionRemoveRequest);
+	void removePermission(long id, boolean admin, HttpServletRequest request);
 
-	void updatePermission(long uid, String permission, long expiry);
+	void removePermission(PermissionRemoveRequest permissionRemoveRequest, boolean admin, HttpServletRequest request);
+
+	void updatePermission(long uid, String permission, long expiry, boolean admin);
 
 	List<Permission> getGroups(long uid);
 

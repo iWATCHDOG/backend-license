@@ -24,5 +24,4 @@ public class BackendLicenseApplication {
 	public Filter rateLimitingFilter() {
 		return new RateLimitingFilter();
 	}
-
 }

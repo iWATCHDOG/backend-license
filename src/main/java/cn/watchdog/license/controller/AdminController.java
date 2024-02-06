@@ -8,6 +8,7 @@ import cn.watchdog.license.constant.CommonConstant;
 import cn.watchdog.license.exception.BusinessException;
 import cn.watchdog.license.model.dto.LogQueryRequest;
 import cn.watchdog.license.model.dto.permission.PermissionAddRequest;
+import cn.watchdog.license.model.dto.permission.PermissionQueryRequest;
 import cn.watchdog.license.model.dto.permission.PermissionRemoveRequest;
 import cn.watchdog.license.model.dto.user.UserQueryRequest;
 import cn.watchdog.license.model.entity.Log;
@@ -16,6 +17,7 @@ import cn.watchdog.license.model.entity.SecurityLog;
 import cn.watchdog.license.model.entity.User;
 import cn.watchdog.license.model.enums.SecurityType;
 import cn.watchdog.license.model.enums.UserStatus;
+import cn.watchdog.license.model.vo.PermissionVO;
 import cn.watchdog.license.model.vo.UserVO;
 import cn.watchdog.license.service.LogService;
 import cn.watchdog.license.service.PermissionService;
@@ -258,23 +260,74 @@ public class AdminController {
 		return ResultUtil.ok(userVOPage);
 	}
 
+	@GetMapping("/permission/list")
+	@AuthCheck(must = "*")
+	public ResponseEntity<BaseResponse<Page<PermissionVO>>> getPermissionListPage(PermissionQueryRequest permissionQueryRequest, HttpServletRequest request) {
+		if (permissionQueryRequest == null) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数错误", request);
+		}
+		Permission permissionQuery = new Permission();
+		BeanUtils.copyProperties(permissionQueryRequest, permissionQuery);
+		long current = permissionQueryRequest.getCurrent();
+		long size = permissionQueryRequest.getPageSize();
+		String sortField = permissionQueryRequest.getSortField();
+		String sortOrder = permissionQueryRequest.getSortOrder();
+		String permission = permissionQueryRequest.getPermission();
+		// 取消expiry的搜索
+		permissionQuery.setExpiry(null);
+		// 默认以id排序
+		if (sortField == null) {
+			sortField = "id";
+		}
+		// 限制爬虫
+		if (size > 100) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, request);
+		}
+		// permission 需支持模糊搜索
+		permissionQuery.setPermission(null);
+		QueryWrapper<Permission> queryWrapper = new QueryWrapper<>(permissionQuery);
+		queryWrapper.like(StringUtils.isNotBlank(permission), "permission", permission);
+		queryWrapper.orderBy(StringUtils.isNotBlank(sortField), sortOrder.equals(CommonConstant.SORT_ORDER_ASC), sortField);
+		Page<Permission> permissionPage = permissionService.page(new Page<>(current, size), queryWrapper);
+		Page<PermissionVO> permissionVOPage = new PageDTO<>(permissionPage.getCurrent(), permissionPage.getSize(), permissionPage.getTotal());
+		List<PermissionVO> permissionVOList = permissionPage.getRecords().stream().map(p -> {
+			PermissionVO permissionVO = new PermissionVO();
+			BeanUtils.copyProperties(p, permissionVO);
+			// 设置username
+			User user = userService.getById(p.getUid());
+			if (user != null) {
+				permissionVO.setUsername(user.getUsername());
+			}
+			return permissionVO;
+		}).collect(Collectors.toList());
+		permissionVOPage.setRecords(permissionVOList);
+		return ResultUtil.ok(permissionVOPage);
+	}
+
 	/**
 	 * 增加权限
 	 */
-	@PostMapping("/permission/add")
+	@PostMapping("/permission/")
 	@AuthCheck(must = "*")
 	public ResponseEntity<BaseResponse<Boolean>> addPermission(PermissionAddRequest permissionAddRequest, HttpServletRequest request) {
-		permissionService.addPermission(permissionAddRequest, request);
+		permissionService.addPermission(permissionAddRequest, true, request);
 		return ResultUtil.ok(true);
 	}
 
 	/**
 	 * 删除权限
 	 */
-	@DeleteMapping("/permission/remove")
+	@DeleteMapping("/permission/")
 	@AuthCheck(must = "*")
 	public ResponseEntity<BaseResponse<Boolean>> removePermission(PermissionRemoveRequest permissionRemoveRequest, HttpServletRequest request) {
-		permissionService.removePermission(permissionRemoveRequest);
+		permissionService.removePermission(permissionRemoveRequest, true, request);
+		return ResultUtil.ok(true);
+	}
+
+	@DeleteMapping("/permission/{id}")
+	@AuthCheck(must = "*")
+	public ResponseEntity<BaseResponse<Boolean>> removePermission(@PathVariable("id") Long id, HttpServletRequest request) {
+		permissionService.removePermission(id, true, request);
 		return ResultUtil.ok(true);
 	}
 

@@ -39,7 +39,15 @@ public enum SecurityType {
 	/**
 	 * 管理操作
 	 */
-	ADMIN_OPERATION(500);
+	ADMIN_OPERATION(500),
+	/**
+	 * 添加权限
+	 */
+	ADD_PERMISSION(501),
+	/**
+	 * 移除权限
+	 */
+	REMOVE_PERMISSION(502);
 
 	final int code;
 

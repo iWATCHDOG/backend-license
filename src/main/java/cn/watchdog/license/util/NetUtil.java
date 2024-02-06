@@ -14,6 +14,9 @@ public class NetUtil {
 	 * 获取客户端 IP 地址
 	 */
 	public static String getIpAddress(HttpServletRequest request) {
+		if (request == null) {
+			return "unknown";
+		}
 		String ip = request.getHeader("x-forwarded-for");
 		if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
 			ip = request.getHeader("Proxy-Client-IP");

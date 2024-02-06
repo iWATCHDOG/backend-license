@@ -23,6 +23,7 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -97,8 +98,26 @@ public class LogInterceptor {
 					requestInfo.setTimestamp(time);
 					requestInfo.setCost(totalTimeMillis);
 					baseResponse.setRequestInfo(requestInfo);
-					if (baseResponse.getData().equals("pong")) {
+					Object data = baseResponse.getData();
+					if (url.startsWith("/ping")) {
+						// 如果是ping请求，不记录日志
 						saveLog = false;
+					} else if (url.startsWith("/admin/count")) {
+						// 如果是admin count请求，不记录日志
+						saveLog = false;
+					} else if (url.startsWith("/notify")) {
+						// 如果是notify请求，再判定是否有必要记录日志
+						// 如果是GET请求，判定是否有返回值;如果不是GET请求，则记录日志
+						if (method.equals("GET")) {
+							// 尝试解析返回值，将data转为List<NotifyResponse>；若解析成功并且list的size大于0，则记录日志
+							try {
+								String dataStr = GsonProvider.normal().toJson(data);
+								List list = GsonProvider.normal().fromJson(dataStr, List.class);
+								saveLog = list != null && !list.isEmpty();
+							} catch (Throwable ignored) {
+								saveLog = false;
+							}
+						}
 					}
 				}
 				String resultStr = GsonProvider.normal().toJson(result);

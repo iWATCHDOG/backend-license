@@ -5,6 +5,7 @@ import cn.watchdog.license.exception.BusinessException;
 import cn.watchdog.license.mapper.PermissionMapper;
 import cn.watchdog.license.model.dto.permission.PermissionAddRequest;
 import cn.watchdog.license.model.dto.permission.PermissionRemoveRequest;
+import cn.watchdog.license.model.dto.permission.PermissionUpdateRequest;
 import cn.watchdog.license.model.entity.Permission;
 import cn.watchdog.license.model.entity.SecurityLog;
 import cn.watchdog.license.model.enums.Group;
@@ -85,6 +86,57 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 	}
 
 	@Override
+	public void updatePermission(PermissionUpdateRequest permissionUpdateRequest, boolean admin, HttpServletRequest request) {
+		// id 和 uid 不能修改
+		long id = permissionUpdateRequest.getId();
+		String newPermission = permissionUpdateRequest.getPermission();
+		long newExpiry = permissionUpdateRequest.getExpiry();
+		SecurityLog securityLog = new SecurityLog();
+		Permission permissionQuery = this.getById(id);
+		if (permissionQuery != null) {
+			long uid = permissionQuery.getUid();
+			userPermissions.invalidate(uid);
+			securityLog.setUid(uid);
+			String oldPermission = permissionQuery.getPermission();
+			long oldExpiry = permissionQuery.getExpiry();
+			// 构造日志
+			securityLog.setTitle("修改权限");
+			List<SecurityType> st = new ArrayList<>(List.of(SecurityType.UPDATE_PERMISSION));
+			if (admin) {
+				st.add(SecurityType.ADMIN_OPERATION);
+			}
+			securityLog.setTypesByList(st);
+			securityLog.setIp(NetUtil.getIpAddress(request));
+			StringBuilder info = new StringBuilder();
+			if (!oldPermission.equalsIgnoreCase(newPermission)) {
+				String ops = "{permission:" + oldPermission + "}";
+				String nps = "{permission:" + newPermission + "}";
+				String sp = "{old:" + ops + ",new:" + nps + "}";
+				permissionQuery.setPermission(newPermission);
+				info.append("修改权限：").append(sp);
+			}
+			if (oldExpiry != newExpiry) {
+				permissionQuery.setExpiry(newExpiry);
+				if (!info.isEmpty()) {
+					String oes = "{date:" + oldExpiry + "}";
+					String nes = "{date:" + newExpiry + "}";
+					String ep = "{old:" + oes + ",new:" + nes + "}";
+					info.append("过期时间：").append(ep);
+				}
+			}
+			if (!info.isEmpty()) {
+				securityLog.setInfo(info.toString());
+				this.updateById(permissionQuery);
+			}
+			this.updateById(permissionQuery);
+			securityLogService.save(securityLog);
+			userPermissions.invalidate(uid);
+		} else {
+			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "权限不存在", request);
+		}
+	}
+
+	@Override
 	public void addPermission(long uid, String permission, long expiry, boolean admin, HttpServletRequest request) {
 		userPermissions.invalidate(uid);
 		Permission permissionQuery = getPermission(uid, permission);
@@ -98,8 +150,7 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 				throw new BusinessException(ReturnCode.SYSTEM_ERROR, "添加失败，数据库错误", request);
 			}
 		} else {
-			permissionQuery.setExpiry(expiry);
-			this.updateById(permissionQuery);
+			throw new BusinessException(ReturnCode.DATA_EXISTED, "权限已存在(" + permissionQuery.getId() + ")", request);
 		}
 		SecurityLog securityLog = new SecurityLog();
 		securityLog.setUid(uid);

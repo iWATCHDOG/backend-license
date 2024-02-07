@@ -2,6 +2,7 @@ package cn.watchdog.license.service;
 
 import cn.watchdog.license.model.dto.permission.PermissionAddRequest;
 import cn.watchdog.license.model.dto.permission.PermissionRemoveRequest;
+import cn.watchdog.license.model.dto.permission.PermissionUpdateRequest;
 import cn.watchdog.license.model.entity.Permission;
 import cn.watchdog.license.model.enums.Group;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -16,6 +17,8 @@ public interface PermissionService extends IService<Permission> {
 	boolean checkPermission(long uid, String permission);
 
 	Permission getPermission(long uid, String permission);
+
+	void updatePermission(PermissionUpdateRequest permissionUpdateRequest, boolean admin, HttpServletRequest request);
 
 	void addPermission(long uid, String permission, long expiry, boolean admin, HttpServletRequest request);
 

@@ -16,6 +16,10 @@ public enum ReturnCode {
 	 */
 	PARAMS_ERROR(40000, "Request parameter error", StatusCode.BAD_REQUEST),
 	/**
+	 * 数据已存在
+	 */
+	DATA_EXISTED(40001, "Data already exists", StatusCode.BAD_REQUEST),
+	/**
 	 * 未登录
 	 */
 	NOT_LOGIN_ERROR(40100, "Not logged in", StatusCode.UNAUTHORIZED),

@@ -10,6 +10,7 @@ import cn.watchdog.license.model.dto.LogQueryRequest;
 import cn.watchdog.license.model.dto.permission.PermissionAddRequest;
 import cn.watchdog.license.model.dto.permission.PermissionQueryRequest;
 import cn.watchdog.license.model.dto.permission.PermissionRemoveRequest;
+import cn.watchdog.license.model.dto.permission.PermissionUpdateRequest;
 import cn.watchdog.license.model.dto.user.UserQueryRequest;
 import cn.watchdog.license.model.entity.Log;
 import cn.watchdog.license.model.entity.Permission;
@@ -19,6 +20,7 @@ import cn.watchdog.license.model.enums.SecurityType;
 import cn.watchdog.license.model.enums.UserStatus;
 import cn.watchdog.license.model.vo.PermissionVO;
 import cn.watchdog.license.model.vo.UserVO;
+import cn.watchdog.license.service.BlacklistService;
 import cn.watchdog.license.service.LogService;
 import cn.watchdog.license.service.PermissionService;
 import cn.watchdog.license.service.SecurityLogService;
@@ -38,6 +40,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -54,6 +57,8 @@ public class AdminController {
 	private PermissionService permissionService;
 	@Resource
 	private LogService logService;
+	@Resource
+	private BlacklistService blacklistService;
 	@Resource
 	private SecurityLogService securityLogService;
 
@@ -315,6 +320,16 @@ public class AdminController {
 	}
 
 	/**
+	 * 修改权限
+	 */
+	@PutMapping("/permission/")
+	@AuthCheck(must = "*")
+	public ResponseEntity<BaseResponse<Boolean>> updatePermission(PermissionUpdateRequest permissionUpdateRequest, HttpServletRequest request) {
+		permissionService.updatePermission(permissionUpdateRequest, true, request);
+		return ResultUtil.ok(true);
+	}
+
+	/**
 	 * 删除权限
 	 */
 	@DeleteMapping("/permission/")
@@ -360,5 +375,19 @@ public class AdminController {
 	public ResponseEntity<BaseResponse<Long>> countSecurityLog(HttpServletRequest request) {
 		long count = securityLogService.count();
 		return ResultUtil.ok(count);
+	}
+
+	@GetMapping("/count/blacklist")
+	@AuthCheck(must = "*")
+	public ResponseEntity<BaseResponse<Long>> countBlacklist(HttpServletRequest request) {
+		long count = blacklistService.count();
+		return ResultUtil.ok(count);
+	}
+
+	@PostMapping("/blacklist/{id}")
+	@AuthCheck(must = "*")
+	public ResponseEntity<BaseResponse<Boolean>> addBlacklist(@PathVariable("id") Long id, HttpServletRequest request) {
+		blacklistService.addBlacklist(id, request);
+		return ResultUtil.ok(true);
 	}
 }

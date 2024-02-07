@@ -47,7 +47,12 @@ public enum SecurityType {
 	/**
 	 * 移除权限
 	 */
-	REMOVE_PERMISSION(502);
+	REMOVE_PERMISSION(502),
+	/**
+	 * 修改权限
+	 */
+	UPDATE_PERMISSION(503),
+	;
 
 	final int code;
 

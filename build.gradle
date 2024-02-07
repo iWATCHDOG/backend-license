@@ -56,10 +56,14 @@ dependencies {
 
 processResources {
     def time = new Date().format('yyyy-MM-dd HH:mm:ss')
-    def props = [version: rootProject.version, time: time]
+    def year = new Date().format('yyyy')
+    def props = [version: rootProject.version, time: time, year: year]
     inputs.properties props
     filteringCharset 'UTF-8'
     filesMatching('version.yml') {
+        expand props
+    }
+    filesMatching('banner.txt') {
         expand props
     }
 }

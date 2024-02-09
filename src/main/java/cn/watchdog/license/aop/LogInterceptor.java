@@ -99,13 +99,7 @@ public class LogInterceptor {
 					requestInfo.setCost(totalTimeMillis);
 					baseResponse.setRequestInfo(requestInfo);
 					Object data = baseResponse.getData();
-					if (url.startsWith("/ping")) {
-						// 如果是ping请求，不记录日志
-						saveLog = false;
-					} else if (url.startsWith("/admin/count")) {
-						// 如果是admin count请求，不记录日志
-						saveLog = false;
-					} else if (url.startsWith("/notify")) {
+					if (url.startsWith("/notify")) {
 						// 如果是notify请求，再判定是否有必要记录日志
 						// 如果是GET请求，判定是否有返回值;如果不是GET请求，则记录日志
 						if (method.equals("GET")) {
@@ -125,6 +119,16 @@ public class LogInterceptor {
 				l.setHttpCode(responseEntity.getStatusCode().value());
 			}
 		} catch (Throwable ignored) {
+		}
+		if (url.startsWith("/ping")) {
+			// 如果是ping请求，不记录日志
+			saveLog = false;
+		} else if (url.startsWith("/admin/count")) {
+			// 如果是admin count请求，不记录日志
+			saveLog = false;
+		} else if (url.startsWith("/user/get/avatar/")) {
+			// 如果是avatar请求，不记录日志
+			saveLog = false;
 		}
 		if (saveLog) {
 			User user = userService.getLoginUserIgnoreError(request);

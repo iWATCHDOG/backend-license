@@ -14,6 +14,7 @@ import java.io.Serial;
 import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -53,5 +54,10 @@ public class SecurityLog implements Serializable {
 	public void setTypesByList(List<SecurityType> securityTypes) {
 		List<Integer> list = securityTypes.stream().map(SecurityType::getCode).toList();
 		this.types = GsonProvider.normal().toJson(list);
+	}
+
+	public void setTitles(Object... titles) {
+		List<String> list = Arrays.stream(titles).map(Object::toString).toList();
+		this.title = String.join(" ", list);
 	}
 }

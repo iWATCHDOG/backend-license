@@ -77,7 +77,7 @@ public class RateLimitingFilter implements Filter {
 			String cookieStr = GsonProvider.normal().toJson(cookies);
 			l.setCookies(cookieStr);
 			l.setCost((long) -1);
-			l.setResult(null);
+			l.setResult("黑名单");
 			l.setHttpCode(StatusCode.FORBIDDEN);
 			scheduler.submit(() -> {
 				// 当前登录用户
@@ -111,7 +111,7 @@ public class RateLimitingFilter implements Filter {
 			String cookieStr = GsonProvider.normal().toJson(cookies);
 			l.setCookies(cookieStr);
 			l.setCost((long) -1);
-			l.setResult(null);
+			l.setResult("请求过于频繁");
 			l.setHttpCode(StatusCode.TOO_MANY_REQUESTS);
 			scheduler.submit(() -> {
 				// 当前登录用户

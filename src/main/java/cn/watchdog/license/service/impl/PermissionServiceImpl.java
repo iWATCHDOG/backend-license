@@ -8,10 +8,12 @@ import cn.watchdog.license.model.dto.permission.PermissionRemoveRequest;
 import cn.watchdog.license.model.dto.permission.PermissionUpdateRequest;
 import cn.watchdog.license.model.entity.Permission;
 import cn.watchdog.license.model.entity.SecurityLog;
+import cn.watchdog.license.model.entity.User;
 import cn.watchdog.license.model.enums.Group;
 import cn.watchdog.license.model.enums.SecurityType;
 import cn.watchdog.license.service.PermissionService;
 import cn.watchdog.license.service.SecurityLogService;
+import cn.watchdog.license.service.UserService;
 import cn.watchdog.license.util.CaffeineFactory;
 import cn.watchdog.license.util.NetUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -20,6 +22,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -34,6 +37,9 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 
 	@Resource
 	private SecurityLogService securityLogService;
+
+	@Resource
+	private UserService userService;
 
 	@Override
 	public Set<Permission> getUserPermissions(long uid) {
@@ -108,7 +114,8 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 			securityLog.setTypesByList(st);
 			securityLog.setIp(NetUtil.getIpAddress(request));
 			StringBuilder info = new StringBuilder();
-			if (!oldPermission.equalsIgnoreCase(newPermission)) {
+			// 如果newPermission不为空且不等于oldPermission，则修改
+			if (!StringUtils.isAnyBlank(newPermission) && !oldPermission.equalsIgnoreCase(newPermission)) {
 				String ops = "{permission:" + oldPermission + "}";
 				String nps = "{permission:" + newPermission + "}";
 				String sp = "{old:" + ops + ",new:" + nps + "}";
@@ -117,12 +124,13 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 			}
 			if (oldExpiry != newExpiry) {
 				permissionQuery.setExpiry(newExpiry);
-				if (!info.isEmpty()) {
-					String oes = "{date:" + oldExpiry + "}";
-					String nes = "{date:" + newExpiry + "}";
-					String ep = "{old:" + oes + ",new:" + nes + "}";
-					info.append("过期时间：").append(ep);
+				String oe = "{date:" + oldExpiry + "}";
+				String ne = "{date:" + newExpiry + "}";
+				String se = "{old:" + oe + ",new:" + ne + "}";
+				if (!info.toString().isBlank()) {
+					info.append("，");
 				}
+				info.append("修改过期时间：").append(se);
 			}
 			if (!info.isEmpty()) {
 				securityLog.setInfo(info.toString());
@@ -130,6 +138,16 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 			}
 			this.updateById(permissionQuery);
 			securityLogService.save(securityLog);
+			if (admin) {
+				User cu = userService.getLoginUser(request);
+				securityLog.setId(null);
+				securityLog.setUid(cu.getUid());
+				securityLog.setIp(NetUtil.getIpAddress(request));
+				securityLog.setTitles("修改权限", permissionQuery.getUid());
+				info.append("，操作人：").append(cu.getUsername());
+				securityLog.setInfo(info.toString());
+				securityLogService.save(securityLog);
+			}
 			userPermissions.invalidate(uid);
 		} else {
 			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "权限不存在", request);
@@ -165,6 +183,15 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 		String sp = "{permission:" + permission + "}";
 		securityLog.setInfo("添加权限：" + sp + "，过期时间：" + ep);
 		securityLogService.save(securityLog);
+		if (admin) {
+			User cu = userService.getLoginUser(request);
+			securityLog.setId(null);
+			securityLog.setUid(cu.getUid());
+			securityLog.setIp(NetUtil.getIpAddress(request));
+			securityLog.setTitles("添加权限", permissionQuery.getUid());
+			securityLog.setInfo("添加权限：" + sp + "，过期时间：" + ep + "，操作人：" + cu.getUsername());
+			securityLogService.save(securityLog);
+		}
 		userPermissions.invalidate(uid);
 	}
 
@@ -216,6 +243,15 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 		securityLog.setTypesByList(st);
 		securityLog.setIp(NetUtil.getIpAddress(request));
 		securityLogService.save(securityLog);
+		if (admin) {
+			User cu = userService.getLoginUser(request);
+			securityLog.setId(null);
+			securityLog.setUid(cu.getUid());
+			securityLog.setIp(NetUtil.getIpAddress(request));
+			securityLog.setTitles("移除权限", uid);
+			securityLog.setInfo("移除权限：" + sp + "，操作人：" + cu.getUsername());
+			securityLogService.save(securityLog);
+		}
 	}
 
 	@Override

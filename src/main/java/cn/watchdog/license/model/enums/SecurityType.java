@@ -43,15 +43,15 @@ public enum SecurityType {
 	/**
 	 * 添加权限
 	 */
-	ADD_PERMISSION(501),
+	ADD_PERMISSION(600),
 	/**
 	 * 移除权限
 	 */
-	REMOVE_PERMISSION(502),
+	REMOVE_PERMISSION(601),
 	/**
 	 * 修改权限
 	 */
-	UPDATE_PERMISSION(503),
+	UPDATE_PERMISSION(602),
 	;
 
 	final int code;

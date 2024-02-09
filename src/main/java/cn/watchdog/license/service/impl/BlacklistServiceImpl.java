@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 @Service
 @Slf4j
 public class BlacklistServiceImpl extends ServiceImpl<BlacklistMapper, Blacklist> implements BlacklistService {
-	private static final Cache<String, Boolean> blackListCache = CaffeineFactory.newBuilder().expireAfterWrite(3, TimeUnit.MINUTES).build();
+	private static final Cache<String, Boolean> blackListCache = CaffeineFactory.newBuilder().expireAfterWrite(1, TimeUnit.DAYS).build();
 	@Resource
 	private LogService logService;
 

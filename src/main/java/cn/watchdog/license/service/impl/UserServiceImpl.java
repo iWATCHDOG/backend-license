@@ -24,6 +24,7 @@ import cn.watchdog.license.util.NetUtil;
 import cn.watchdog.license.util.NumberUtil;
 import cn.watchdog.license.util.PasswordUtil;
 import cn.watchdog.license.util.StringUtil;
+import cn.watchdog.license.util.gson.GsonProvider;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -54,6 +55,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
@@ -232,18 +234,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		if (authUser == null) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空", request);
 		}
+		log.info("用户： {}", GsonProvider.normal().toJson(authUser));
 		String username = authUser.getUsername();
 		AuthToken authToken = authUser.getToken();
 		JSONObject rawUserInfo = authUser.getRawUserInfo();
 		String avatar = authUser.getAvatar();
 		String email = authUser.getEmail();
-		String openId, token;
-		if (oAuthPlatForm == OAuthPlatForm.GITHUB) {
-			openId = rawUserInfo.getString("id");
-			token = rawUserInfo.getString("node_id");
-		} else {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, "未知的平台", request);
-		}
+		String openId = rawUserInfo.getString("id");
+		String token = authToken.getAccessToken();
 		AuthUserGender authUserGender = authUser.getGender();
 		UserGender userGender = UserGender.valueOf(authUserGender);
 		// 判断是否已经绑定过
@@ -263,6 +261,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 					notifyResponse.setContent("已绑定GitHub账号,请勿重复绑定");
 					CommonConstant.addNotifyResponse(request, notifyResponse);
 					throw new BusinessException(ReturnCode.OPERATION_ERROR, "已绑定GitHub账号,请勿重复绑定", request);
+				} else if (oAuthPlatForm == OAuthPlatForm.GITEE) {
+					notifyResponse.setTitle("Gitee账号绑定失败");
+					notifyResponse.setContent("已绑定Gitee账号,请勿重复绑定");
+					CommonConstant.addNotifyResponse(request, notifyResponse);
+					throw new BusinessException(ReturnCode.OPERATION_ERROR, "已绑定Gitee账号,请勿重复绑定", request);
+				} else if (oAuthPlatForm == OAuthPlatForm.MICROSOFT) {
+					notifyResponse.setTitle("Microsoft账号绑定失败");
+					notifyResponse.setContent("已绑定Microsoft账号,请勿重复绑定");
+					CommonConstant.addNotifyResponse(request, notifyResponse);
+					throw new BusinessException(ReturnCode.OPERATION_ERROR, "已绑定Microsoft账号,请勿重复绑定", request);
 				}
 			}
 			QueryWrapper<OAuth> oAuthQueryWrapper1 = new QueryWrapper<>();
@@ -278,6 +286,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 					notifyResponse.setContent("该GitHub账号已绑定其他账号");
 					CommonConstant.addNotifyResponse(request, notifyResponse);
 					throw new BusinessException(ReturnCode.OPERATION_ERROR, "该GitHub账号已绑定其他账号", request);
+				} else if (oAuthPlatForm == OAuthPlatForm.GITEE) {
+					notifyResponse.setTitle("Gitee账号绑定失败");
+					notifyResponse.setContent("该Gitee账号已绑定其他账号");
+					CommonConstant.addNotifyResponse(request, notifyResponse);
+					throw new BusinessException(ReturnCode.OPERATION_ERROR, "该Gitee账号已绑定其他账号", request);
+				} else if (oAuthPlatForm == OAuthPlatForm.MICROSOFT) {
+					notifyResponse.setTitle("Microsoft账号绑定失败");
+					notifyResponse.setContent("该Microsoft账号已绑定其他账号");
+					CommonConstant.addNotifyResponse(request, notifyResponse);
+					throw new BusinessException(ReturnCode.OPERATION_ERROR, "该Microsoft账号已绑定其他账号", request);
 				}
 			}
 			oAuth = new OAuth();
@@ -292,12 +310,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			SecurityLog securityLog = new SecurityLog();
 			securityLog.setUid(user.getUid());
 			securityLog.setTitle(user.getUsername());
-			List<SecurityType> st = List.of(SecurityType.BIND_GITHUB);
-			securityLog.setTypesByList(st);
+			List<SecurityType> st = new ArrayList<>();
 			securityLog.setIp(NetUtil.getIpAddress(request));
 			if (oAuthPlatForm == OAuthPlatForm.GITHUB) {
 				securityLog.setInfo("GitHub ID: " + openId);
+				st.add(SecurityType.BIND_GITHUB);
+			} else if (oAuthPlatForm == OAuthPlatForm.GITEE) {
+				securityLog.setInfo("Gitee ID: " + openId);
+				st.add(SecurityType.BIND_GITEE);
 			}
+			securityLog.setTypesByList(st);
 			securityLogService.save(securityLog);
 			return user;
 		}
@@ -344,6 +366,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		securityLog.setIp(NetUtil.getIpAddress(request));
 		if (oAuthPlatForm == OAuthPlatForm.GITHUB) {
 			securityLog.setInfo("GitHub ID: " + openId);
+		} else if (oAuthPlatForm == OAuthPlatForm.GITEE) {
+			securityLog.setInfo("Gitee ID: " + openId);
+		} else if (oAuthPlatForm == OAuthPlatForm.MICROSOFT) {
+			securityLog.setInfo("Microsoft ID: " + openId);
 		}
 		securityLogService.save(securityLog);
 		return user;
@@ -644,6 +670,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		securityLog.setTitle(user.getUsername());
 		if (oAuthPlatForm == OAuthPlatForm.GITHUB) {
 			securityLog.setTypesByList(List.of(SecurityType.UNBIND_GITHUB));
+		} else if (oAuthPlatForm == OAuthPlatForm.GITEE) {
+			securityLog.setTypesByList(List.of(SecurityType.UNBIND_GITEE));
 		}
 		securityLog.setInfo(String.valueOf(oAuth.getOpenId()));
 		securityLog.setInfo(oAuthPlatForm.getName() + " ID" + oAuth.getOpenId());

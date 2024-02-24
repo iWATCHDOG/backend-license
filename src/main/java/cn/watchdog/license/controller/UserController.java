@@ -374,7 +374,7 @@ public class UserController {
 		securityLog.setIp(NetUtil.getIpAddress(request));
 		securityLogService.save(securityLog);
 		user.setUserStatus(UserStatus.DELETED);
-		userService.save(user);
+		userService.updateById(user);
 		// userService.removeById(user);
 		return ResultUtil.ok(true);
 	}

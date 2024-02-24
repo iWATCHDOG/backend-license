@@ -19,7 +19,15 @@ public enum OAuthPlatForm {
 	/**
 	 * 支付宝
 	 */
-	ALIPAY(4, "支付宝");
+	ALIPAY(4, "支付宝"),
+	/**
+	 * Gitee
+	 */
+	GITEE(5, "Gitee"),
+	/**
+	 * Microsoft
+	 */
+	MICROSOFT(6, "Microsoft");
 	final int code;
 	final String name;
 

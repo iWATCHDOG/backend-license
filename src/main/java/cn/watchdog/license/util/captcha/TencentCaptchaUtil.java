@@ -12,7 +12,6 @@ import com.tencentcloudapi.common.exception.TencentCloudSDKException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 
 @Data
 @Slf4j
@@ -58,10 +57,8 @@ public class TencentCaptchaUtil {
 		  100 appid-secretkey-ticket mismatch 参数校验错误，（1）请检查CaptchaAppId与AppSecretKey是否正确，CaptchaAppId、AppSecretKey需要在验证码控制台【验证管理】>【基础配置】中获取（2）请检查传入的Ticket是否由传入的CaptchaAppId生成
 		 */
 		long captchaCode = resp.getCaptchaCode();
-		String captchaMsg = resp.getCaptchaMsg();
-		captchaMsg = StringUtils.isAnyBlank(captchaMsg) ? "" : captchaMsg;
 		String requestId = resp.getRequestId();
-		captchaMsg = "RequestId: " + requestId + ", " + captchaMsg;
+		String captchaMsg = "RequestId: " + requestId;
 		if (captchaCode == 1) {
 			/*
 			  无感验证模式下，该参数返回验证结果：

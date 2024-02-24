@@ -21,6 +21,14 @@ public enum SecurityType {
 	 */
 	UNBIND_GITHUB(201),
 	/**
+	 * 绑定Gitee
+	 */
+	BIND_GITEE(202),
+	/**
+	 * 解绑Gitee
+	 */
+	UNBIND_GITEE(203),
+	/**
 	 * 更新资料
 	 */
 	UPDATE_PROFILE(300),

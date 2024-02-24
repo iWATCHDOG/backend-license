@@ -1,6 +1,7 @@
 package cn.watchdog.license.model.enums;
 
 import lombok.Getter;
+import me.zhyd.oauth.enums.AuthUserGender;
 
 @Getter
 public enum UserGender {
@@ -32,5 +33,16 @@ public enum UserGender {
 			}
 		}
 		return UNKNOWN;
+	}
+
+	public static UserGender valueOf(AuthUserGender authUserGender) {
+		if (authUserGender == null) {
+			return UNKNOWN;
+		}
+		return switch (authUserGender) {
+			case MALE -> MALE;
+			case FEMALE -> FEMALE;
+			default -> UNKNOWN;
+		};
 	}
 }

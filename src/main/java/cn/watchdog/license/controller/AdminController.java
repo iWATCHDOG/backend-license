@@ -128,7 +128,7 @@ public class AdminController {
 		}
 		userService.clearOAuthByUser(user, request);
 		user.setUserStatus(UserStatus.DELETED);
-		userService.save(user);
+		userService.updateById(user);
 		boolean save = userService.removeById(uid);
 		if (save) {
 			User cu = userService.getLoginUser(request);
@@ -209,7 +209,6 @@ public class AdminController {
 		Page<Log> ret = new PageDTO<>(logPage.getCurrent(), logPage.getSize(), logPage.getTotal());
 		List<Log> records = logPage.getRecords().stream().peek(l -> {
 			l.setParams(null);
-			l.setCookies(null);
 			l.setResult(null);
 		}).toList();
 		ret.setRecords(records);

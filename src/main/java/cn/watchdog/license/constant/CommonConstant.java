@@ -24,6 +24,11 @@ public interface CommonConstant {
 	String SORT_ORDER_DESC = " descend";
 
 	/**
+	 * captcha的header名字
+	 */
+	String CAPTCHA_HEADER = "captcha";
+
+	/**
 	 * 通知列表
 	 */
 	String NOTIFY_LIST = "notifyList";

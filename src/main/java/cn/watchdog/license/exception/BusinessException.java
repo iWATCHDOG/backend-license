@@ -4,12 +4,14 @@ package cn.watchdog.license.exception;
 import cn.watchdog.license.common.ReturnCode;
 import cn.watchdog.license.util.NetUtil;
 import cn.watchdog.license.util.gson.GsonProvider;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import javax.annotation.Nullable;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 自定义异常类
@@ -21,7 +23,7 @@ public class BusinessException extends RuntimeException {
 	private Object data;
 	private String method;
 	private String url;
-	private Cookie[] cookies;
+	private Map<String, String> headers;
 	private String params;
 	private String userAgent;
 	private String ip;
@@ -88,7 +90,15 @@ public class BusinessException extends RuntimeException {
 		if (request != null) {
 			this.method = request.getMethod();
 			this.url = request.getRequestURI();
-			this.cookies = request.getCookies();
+			// 获取请求Headers
+			Map<String, String> headers = new HashMap<>();
+			Enumeration<String> headerNames = request.getHeaderNames();
+			while (headerNames.hasMoreElements()) {
+				String headerName = headerNames.nextElement();
+				String headerValue = request.getHeader(headerName);
+				headers.put(headerName, headerValue);
+			}
+			this.headers = headers;
 			this.params = GsonProvider.normal().toJson(request.getParameterMap());
 			this.userAgent = request.getHeader("User-Agent");
 			this.ip = NetUtil.getIpAddress(request);

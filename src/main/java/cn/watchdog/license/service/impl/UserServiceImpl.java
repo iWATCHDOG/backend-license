@@ -15,6 +15,7 @@ import cn.watchdog.license.model.entity.User;
 import cn.watchdog.license.model.enums.NotifyType;
 import cn.watchdog.license.model.enums.OAuthPlatForm;
 import cn.watchdog.license.model.enums.SecurityType;
+import cn.watchdog.license.model.enums.UserGender;
 import cn.watchdog.license.model.enums.UserStatus;
 import cn.watchdog.license.service.SecurityLogService;
 import cn.watchdog.license.service.UserService;
@@ -23,13 +24,16 @@ import cn.watchdog.license.util.NetUtil;
 import cn.watchdog.license.util.NumberUtil;
 import cn.watchdog.license.util.PasswordUtil;
 import cn.watchdog.license.util.StringUtil;
-import cn.watchdog.license.util.oauth.GithubUser;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.github.benmanes.caffeine.cache.Cache;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import me.zhyd.oauth.enums.AuthUserGender;
+import me.zhyd.oauth.model.AuthToken;
+import me.zhyd.oauth.model.AuthUser;
 import net.coobird.thumbnailator.Thumbnails;
 import okhttp3.OkHttpClient;
 import org.apache.commons.lang3.StringUtils;
@@ -224,16 +228,24 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 	}
 
 	@Override
-	public User oAuthLogin(GithubUser githubUser, HttpServletRequest request) {
-		if (githubUser == null) {
+	public User oAuthLogin(AuthUser authUser, OAuthPlatForm oAuthPlatForm, HttpServletRequest request) {
+		if (authUser == null) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空", request);
 		}
-		OAuthPlatForm oAuthPlatForm = OAuthPlatForm.GITHUB;
-		String login = githubUser.getLogin();
-		long id = githubUser.getId();
-		String node_id = githubUser.getNode_id();
-		String avatar_url = githubUser.getAvatar_url();
-		String email = githubUser.getEmail();
+		String username = authUser.getUsername();
+		AuthToken authToken = authUser.getToken();
+		JSONObject rawUserInfo = authUser.getRawUserInfo();
+		String avatar = authUser.getAvatar();
+		String email = authUser.getEmail();
+		String openId, token;
+		if (oAuthPlatForm == OAuthPlatForm.GITHUB) {
+			openId = rawUserInfo.getString("id");
+			token = rawUserInfo.getString("node_id");
+		} else {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "未知的平台", request);
+		}
+		AuthUserGender authUserGender = authUser.getGender();
+		UserGender userGender = UserGender.valueOf(authUserGender);
 		// 判断是否已经绑定过
 		QueryWrapper<OAuth> oAuthQueryWrapper = new QueryWrapper<>();
 		oAuthQueryWrapper.eq("platform", oAuthPlatForm.getCode());
@@ -246,29 +258,33 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 				// 添加通知
 				NotifyResponse notifyResponse = new NotifyResponse();
 				notifyResponse.setType(NotifyType.WARNING);
-				notifyResponse.setTitle("GitHub账号绑定失败");
-				notifyResponse.setContent("已绑定GitHub账号,请勿重复绑定");
-				CommonConstant.addNotifyResponse(request, notifyResponse);
-				throw new BusinessException(ReturnCode.OPERATION_ERROR, "已绑定GitHub账号,请勿重复绑定", request);
+				if (oAuthPlatForm == OAuthPlatForm.GITHUB) {
+					notifyResponse.setTitle("GitHub账号绑定失败");
+					notifyResponse.setContent("已绑定GitHub账号,请勿重复绑定");
+					CommonConstant.addNotifyResponse(request, notifyResponse);
+					throw new BusinessException(ReturnCode.OPERATION_ERROR, "已绑定GitHub账号,请勿重复绑定", request);
+				}
 			}
 			QueryWrapper<OAuth> oAuthQueryWrapper1 = new QueryWrapper<>();
 			oAuthQueryWrapper1.eq("platform", oAuthPlatForm.getCode());
-			oAuthQueryWrapper1.eq("openId", id);
+			oAuthQueryWrapper1.eq("openId", openId);
 			oAuth = oAuthMapper.selectOne(oAuthQueryWrapper1);
 			if (oAuth != null) {
 				// 添加通知
 				NotifyResponse notifyResponse = new NotifyResponse();
 				notifyResponse.setType(NotifyType.ERROR);
-				notifyResponse.setTitle("GitHub账号绑定失败");
-				notifyResponse.setContent("该GitHub账号已绑定其他账号");
-				CommonConstant.addNotifyResponse(request, notifyResponse);
-				throw new BusinessException(ReturnCode.OPERATION_ERROR, "该GitHub账号已绑定其他账号", request);
+				if (oAuthPlatForm == OAuthPlatForm.GITHUB) {
+					notifyResponse.setTitle("GitHub账号绑定失败");
+					notifyResponse.setContent("该GitHub账号已绑定其他账号");
+					CommonConstant.addNotifyResponse(request, notifyResponse);
+					throw new BusinessException(ReturnCode.OPERATION_ERROR, "该GitHub账号已绑定其他账号", request);
+				}
 			}
 			oAuth = new OAuth();
 			oAuth.setUid(user.getUid());
 			oAuth.setPlatform(oAuthPlatForm.getCode());
-			oAuth.setOpenId(String.valueOf(id));
-			oAuth.setToken(node_id);
+			oAuth.setOpenId(openId);
+			oAuth.setToken(token);
 			boolean saveResult = oAuthMapper.insert(oAuth) > 0;
 			if (!saveResult) {
 				throw new BusinessException(ReturnCode.SYSTEM_ERROR, "添加失败，数据库错误", request);
@@ -279,11 +295,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			List<SecurityType> st = List.of(SecurityType.BIND_GITHUB);
 			securityLog.setTypesByList(st);
 			securityLog.setIp(NetUtil.getIpAddress(request));
-			securityLog.setInfo("GitHub ID: " + id);
+			if (oAuthPlatForm == OAuthPlatForm.GITHUB) {
+				securityLog.setInfo("GitHub ID: " + openId);
+			}
 			securityLogService.save(securityLog);
 			return user;
 		}
-		oAuthQueryWrapper.eq("openId", id);
+		oAuthQueryWrapper.eq("openId", openId);
 		OAuth oAuth = oAuthMapper.selectOne(oAuthQueryWrapper);
 		if (oAuth != null) {
 			// 已经绑定过，直接登录
@@ -296,22 +314,23 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		}
 		// 未绑定，创建账户
 		User user = new User();
-		String username = generateUserName(login, oAuthPlatForm.name().toLowerCase(), request);
+		username = generateUserName(username, oAuthPlatForm.name().toLowerCase(), request);
 		user.setUsername(username);
 		String randomPassword = StringUtil.getRandomString(10);
 		user.setPassword(PasswordUtil.encodePassword(randomPassword));
 		user.setEmail(email);
+		user.setUserGender(userGender);
 		boolean saveResult = this.save(user);
 		if (!saveResult) {
 			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "添加失败，数据库错误", request);
 		}
-		downloadAvatar(user, avatar_url, request);
+		downloadAvatar(user, avatar, request);
 		// 绑定账户
 		oAuth = new OAuth();
 		oAuth.setUid(user.getUid());
 		oAuth.setPlatform(oAuthPlatForm.getCode());
-		oAuth.setOpenId(String.valueOf(id));
-		oAuth.setToken(node_id);
+		oAuth.setOpenId(String.valueOf(openId));
+		oAuth.setToken(token);
 		saveResult = oAuthMapper.insert(oAuth) > 0;
 		if (!saveResult) {
 			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "添加失败，数据库错误", request);
@@ -323,7 +342,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		List<SecurityType> st = List.of(SecurityType.ADD_ACCOUNT, SecurityType.BIND_GITHUB);
 		securityLog.setTypesByList(st);
 		securityLog.setIp(NetUtil.getIpAddress(request));
-		securityLog.setInfo("GitHub ID: " + id);
+		if (oAuthPlatForm == OAuthPlatForm.GITHUB) {
+			securityLog.setInfo("GitHub ID: " + openId);
+		}
 		securityLogService.save(securityLog);
 		return user;
 	}

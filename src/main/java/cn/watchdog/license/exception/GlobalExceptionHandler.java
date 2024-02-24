@@ -32,10 +32,8 @@ public class GlobalExceptionHandler {
 		l.setMethod(e.getMethod());
 		l.setParams(e.getParams());
 		l.setUrl(e.getUrl());
-		String cookieStr = GsonProvider.normal().toJson(e.getCookies());
-		l.setCookies(cookieStr);
+		l.setHeaders(GsonProvider.normal().toJson(e.getHeaders()));
 		l.setIp(e.getIp());
-		l.setUserAgent(e.getUserAgent());
 		l.setResult(e.getMessage());
 		logService.addLog(l, e.getRequest());
 		log.error("businessException, id: {}, message: {}", requestId, e.getMessage(), e);

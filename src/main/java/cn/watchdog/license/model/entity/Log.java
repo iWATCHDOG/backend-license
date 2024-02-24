@@ -26,10 +26,9 @@ public class Log implements Serializable {
 	private Long uid;
 	private String requestId;
 	private String ip;
-	private String userAgent;
+	private String headers;
 	private String url;
 	private String method;
-	private String cookies;
 	private String params;
 	private String result;
 	private Integer httpCode;

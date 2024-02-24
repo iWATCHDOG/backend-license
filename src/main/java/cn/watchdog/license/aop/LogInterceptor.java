@@ -12,7 +12,6 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -23,7 +22,10 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -68,18 +70,38 @@ public class LogInterceptor {
 		Cookie[] cookies = request.getCookies();
 		// 获取请求参数
 		Object[] args = point.getArgs();
-		String reqParam = "[" + StringUtils.join(args, ", ") + "]";
+		String reqParam = null;
+		for (Object arg : args) {
+			if (arg instanceof HttpServletRequest) {
+				HttpServletRequest req = (HttpServletRequest) arg;
+				Enumeration<String> parameterNames = req.getParameterNames();
+				Map<String, String> map = new HashMap<>();
+				while (parameterNames.hasMoreElements()) {
+					String name = parameterNames.nextElement();
+					String value = req.getParameter(name);
+					map.put(name, value);
+				}
+				reqParam = GsonProvider.normal().toJson(map);
+				break;
+			}
+		}
+		// 获取请求Headers
+		Map<String, String> headers = new HashMap<>();
+		Enumeration<String> headerNames = request.getHeaderNames();
+		while (headerNames.hasMoreElements()) {
+			String headerName = headerNames.nextElement();
+			String headerValue = request.getHeader(headerName);
+			headers.put(headerName, headerValue);
+		}
 		// 输出请求日志
 		log.info("request start，id: {}, path: {}, ip: {}, params: {}", requestId, url, ip, reqParam);
 		Log l = new Log();
 		l.setRequestId(requestId);
-		l.setUserAgent(userAgent);
 		l.setMethod(method);
 		l.setIp(ip);
 		l.setUrl(url);
 		l.setParams(reqParam);
-		String cookieStr = GsonProvider.normal().toJson(cookies);
-		l.setCookies(cookieStr);
+		l.setHeaders(GsonProvider.normal().toJson(headers));
 		// 执行原方法
 		Object result = point.proceed();
 		// 输出响应日志

@@ -7,6 +7,7 @@ import cn.watchdog.license.common.ReturnCode;
 import cn.watchdog.license.common.StatusCode;
 import cn.watchdog.license.constant.CommonConstant;
 import cn.watchdog.license.exception.BusinessException;
+import cn.watchdog.license.model.dto.CaptchaResult;
 import cn.watchdog.license.model.dto.user.UpdateUserPasswordRequest;
 import cn.watchdog.license.model.dto.user.UpdateUserProfileRequest;
 import cn.watchdog.license.model.dto.user.UserCreateRequest;
@@ -26,13 +27,17 @@ import cn.watchdog.license.service.UserService;
 import cn.watchdog.license.service.impl.UserServiceImpl;
 import cn.watchdog.license.util.NetUtil;
 import cn.watchdog.license.util.StringUtil;
+import cn.watchdog.license.util.captcha.TencentCaptchaUtil;
+import cn.watchdog.license.util.gson.GsonProvider;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.tencentcloudapi.common.exception.TencentCloudSDKException;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -52,12 +57,14 @@ import java.nio.file.Files;
 import java.util.List;
 import java.util.UUID;
 
+import static cn.watchdog.license.constant.CommonConstant.*;
 import static cn.watchdog.license.constant.UserConstant.*;
 
 @RestController
 @RequestMapping("/user")
 @Slf4j
 public class UserController {
+	public static TencentCaptchaUtil TENCENT_CAPTCHA_UTIL = null;
 	@Resource
 	private UserService userService;
 	@Resource
@@ -66,6 +73,14 @@ public class UserController {
 	private SecurityLogService securityLogService;
 	@Resource
 	private MailService mailService;
+	@Value("${tencent.secret-id}")
+	private String tencentSecretId;
+	@Value("${tencent.secret-key}")
+	private String tencentSecretKey;
+	@Value("${captcha.app-id}")
+	private String captchaAppId;
+	@Value("${captcha.secret-key}")
+	private String captchaAppSecretKey;
 
 	@PostMapping("/create")
 	public ResponseEntity<BaseResponse<Boolean>> userCreate(UserCreateRequest userCreateRequest, HttpServletRequest request) {
@@ -121,6 +136,23 @@ public class UserController {
 
 	@GetMapping("/login")
 	public ResponseEntity<BaseResponse<UserVO>> userLogin(UserLoginRequest userLoginRequest, HttpServletRequest request) {
+		if (TENCENT_CAPTCHA_UTIL == null) {
+			// init
+			TENCENT_CAPTCHA_UTIL = new TencentCaptchaUtil(tencentSecretId, tencentSecretKey, captchaAppSecretKey);
+		}
+		// 获取Header里的captcha
+		String captcha = request.getHeader(CAPTCHA_HEADER);
+		// 将captcha转换为CaptchaResult
+		CaptchaResult captchaResult = GsonProvider.normal().fromJson(captcha, CaptchaResult.class);
+		if (captchaResult == null) {
+			throw new BusinessException(ReturnCode.VALIDATION_FAILED, "请进行人机验证", request);
+		}
+		// 验证captcha
+		try {
+			TENCENT_CAPTCHA_UTIL.isCaptchaValid(captchaResult, Long.parseLong(captchaAppId), request);
+		} catch (TencentCloudSDKException e) {
+			throw new BusinessException(ReturnCode.SYSTEM_ERROR, e.getMessage(), request);
+		}
 		User user = userService.userLogin(userLoginRequest, request);
 		UserVO userVO = user.toUserVO();
 		// 获取Token

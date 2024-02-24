@@ -49,4 +49,5 @@ public class RootController {
 		CommonConstant.addNotifyResponse(request, notifyResponse);
 		return ResultUtil.ok("ok");
 	}
+
 }

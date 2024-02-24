@@ -23,6 +23,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -53,6 +56,14 @@ public class RateLimitingFilter implements Filter {
 		String url = httpServletRequest.getRequestURI();
 		// 获取cookies
 		Cookie[] cookies = httpServletRequest.getCookies();
+		// 获取请求Headers
+		Map<String, String> headers = new HashMap<>();
+		Enumeration<String> headerNames = httpServletRequest.getHeaderNames();
+		while (headerNames.hasMoreElements()) {
+			String headerName = headerNames.nextElement();
+			String headerValue = httpServletRequest.getHeader(headerName);
+			headers.put(headerName, headerValue);
+		}
 		// 获取args
 		String args = GsonProvider.normal().toJson(httpServletRequest.getParameterMap());
 		// 检查是否在黑名单
@@ -69,13 +80,11 @@ public class RateLimitingFilter implements Filter {
 			httpServletResponse.getWriter().write(GsonProvider.normal().toJson(baseResponse));
 			Log l = new Log();
 			l.setRequestId(id);
-			l.setUserAgent(userAgent);
 			l.setMethod(method);
 			l.setIp(ipAddress);
 			l.setUrl(url);
 			l.setParams(args);
-			String cookieStr = GsonProvider.normal().toJson(cookies);
-			l.setCookies(cookieStr);
+			l.setHeaders(GsonProvider.normal().toJson(headers));
 			l.setCost((long) -1);
 			l.setResult("黑名单");
 			l.setHttpCode(StatusCode.FORBIDDEN);
@@ -103,13 +112,11 @@ public class RateLimitingFilter implements Filter {
 			httpServletResponse.getWriter().write(GsonProvider.normal().toJson(baseResponse));
 			Log l = new Log();
 			l.setRequestId(id);
-			l.setUserAgent(userAgent);
 			l.setMethod(method);
 			l.setIp(ipAddress);
 			l.setUrl(url);
 			l.setParams(args);
-			String cookieStr = GsonProvider.normal().toJson(cookies);
-			l.setCookies(cookieStr);
+			l.setHeaders(GsonProvider.normal().toJson(headers));
 			l.setCost((long) -1);
 			l.setResult("请求过于频繁");
 			l.setHttpCode(StatusCode.TOO_MANY_REQUESTS);

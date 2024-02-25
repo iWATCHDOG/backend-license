@@ -24,7 +24,6 @@ import cn.watchdog.license.util.NetUtil;
 import cn.watchdog.license.util.NumberUtil;
 import cn.watchdog.license.util.PasswordUtil;
 import cn.watchdog.license.util.StringUtil;
-import cn.watchdog.license.util.gson.GsonProvider;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -98,7 +97,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		if (!StringUtils.isAnyBlank(email)) {
 			// 邮箱注册
 			// 检查邮箱格式
-			if (!email.matches("^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+$")) {
+			if (!email.matches("^[a-zA-Z0-9._+-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+$")) {
 				throw new BusinessException(ReturnCode.PARAMS_ERROR, "邮箱格式错误", request);
 			}
 		}
@@ -135,7 +134,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 	}
 
 	@Override
-	public boolean userCreate(UserCreateRequest userCreateRequest, HttpServletRequest request) {
+	public User userCreate(UserCreateRequest userCreateRequest, HttpServletRequest request) {
 		if (userCreateRequest == null) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空", request);
 		}
@@ -159,8 +158,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		if (!StringUtils.isAnyBlank(email)) {
 			// 邮箱注册
 			// 检查邮箱格式
-			if (!email.matches("^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+$")) {
-				throw new BusinessException(ReturnCode.PARAMS_ERROR, "邮箱格式错误", email, request);
+			if (!email.matches("^[a-zA-Z0-9._+-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+$")) {
+				throw new BusinessException(ReturnCode.PARAMS_ERROR, "邮箱格式错误", request);
 			}
 			user.setEmail(email);
 			String icode = UserServiceImpl.codeCache.getIfPresent(email);
@@ -193,7 +192,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		securityLog.setTypesByList(st);
 		securityLog.setIp(NetUtil.getIpAddress(request));
 		securityLogService.save(securityLog);
-		return true;
+		return user;
 	}
 
 	private void validateUserCredentials(String userName, String userPassword, HttpServletRequest request) {
@@ -234,7 +233,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		if (authUser == null) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空", request);
 		}
-		log.info("用户： {}", GsonProvider.normal().toJson(authUser));
+		// log.info("用户： {}", GsonProvider.normal().toJson(authUser));
 		String username = authUser.getUsername();
 		AuthToken authToken = authUser.getToken();
 		JSONObject rawUserInfo = authUser.getRawUserInfo();
@@ -674,7 +673,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			securityLog.setTypesByList(List.of(SecurityType.UNBIND_GITEE));
 		}
 		securityLog.setInfo(String.valueOf(oAuth.getOpenId()));
-		securityLog.setInfo(oAuthPlatForm.getName() + " ID" + oAuth.getOpenId());
+		securityLog.setInfo(oAuthPlatForm.getName() + " ID: " + oAuth.getOpenId());
 		securityLog.setIp(NetUtil.getIpAddress(request));
 		securityLogService.save(securityLog);
 		oAuthMapper.deleteById(oAuth.getId());
@@ -765,8 +764,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		if (StringUtils.isBlank(email)) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "邮箱为空", request);
 		}
-		if (!email.matches("^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+$")) {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, "邮箱格式错误", email, request);
+		if (!email.matches("^[a-zA-Z0-9._+-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+$")) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "邮箱格式错误", request);
 		}
 		QueryWrapper<User> queryWrapper = new QueryWrapper<>();
 		queryWrapper.eq("email", email);

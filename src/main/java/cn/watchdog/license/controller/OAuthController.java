@@ -23,6 +23,7 @@ import me.zhyd.oauth.model.AuthUser;
 import me.zhyd.oauth.request.AuthGiteeRequest;
 import me.zhyd.oauth.request.AuthGithubRequest;
 import me.zhyd.oauth.request.AuthMicrosoftRequest;
+import me.zhyd.oauth.request.AuthQqRequest;
 import me.zhyd.oauth.utils.AuthStateUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -37,18 +38,24 @@ import java.io.IOException;
 @RequestMapping("/oauth")
 @Slf4j
 public class OAuthController {
+	@Value("${oauth.github.enable}")
+	private boolean githubEnable;
 	@Value("${oauth.github.client-id}")
 	private String githubClientId;
 	@Value("${oauth.github.redirect-uri}")
 	private String githubRedirectUri;
 	@Value("${oauth.github.client-secret}")
 	private String githubClientSecret;
+	@Value("${oauth.gitee.enable}")
+	private boolean giteeEnable;
 	@Value("${oauth.gitee.client-id}")
 	private String giteeClientId;
 	@Value("${oauth.gitee.redirect-uri}")
 	private String giteeRedirectUri;
 	@Value("${oauth.gitee.client-secret}")
 	private String giteeClientSecret;
+	@Value("${oauth.microsoft.enable}")
+	private boolean microsoftEnable;
 	@Value("${oauth.microsoft.client-id}")
 	private String microsoftClientId;
 	@Value("${oauth.microsoft.redirect-uri}")
@@ -59,6 +66,16 @@ public class OAuthController {
 	private String microsoftTenantId;
 	@Value("${website.url}")
 	private String websiteUrl;
+	@Value("${oauth.qq.enable}")
+	private boolean qqEnable;
+	@Value("${oauth.qq.client-id}")
+	private String qqClientId;
+	@Value("${oauth.qq.redirect-uri}")
+	private String qqRedirectUri;
+	@Value("${oauth.qq.client-secret}")
+	private String qqClientSecret;
+	@Value("${oauth.bilibili.enable}")
+	private boolean bilibiliEnable;
 	@Resource
 	private UserService userService;
 
@@ -101,7 +118,16 @@ public class OAuthController {
 		String url = authGithubRequest.authorize(AuthStateUtils.createState());
 		// 直接重定向到url
 		try {
-			response.sendRedirect(url);
+			if (githubEnable) {
+				response.sendRedirect(url);
+			} else {
+				response.sendRedirect(websiteUrl);
+				NotifyResponse notifyResponse = new NotifyResponse();
+				notifyResponse.setType(NotifyType.ERROR);
+				notifyResponse.setTitle("Github登录暂时不可用");
+				notifyResponse.setContent("由于技术和测试原因，Github登录暂时不可用，我们正在努力解决这个问题，给您带来的不便我们深感抱歉。");
+				CommonConstant.addNotifyResponse(request, notifyResponse);
+			}
 		} catch (IOException e) {
 			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to redirect to Github", request);
 		}
@@ -110,10 +136,13 @@ public class OAuthController {
 
 	@RequestMapping("/github/callback")
 	public ResponseEntity<BaseResponse<String>> githubCallback(AuthCallback callback, HttpServletRequest request, HttpServletResponse response) {
-		AuthGithubRequest authGithubRequest = getAuthGithubRequest();
-		AuthResponse<AuthUser> authResponse = authGithubRequest.login(callback);
-		AuthUser authUser = authResponse.getData();
-		User user = userService.oAuthLogin(authUser, OAuthPlatForm.GITHUB, request);
+		try {
+			AuthGithubRequest authGithubRequest = getAuthGithubRequest();
+			AuthResponse<AuthUser> authResponse = authGithubRequest.login(callback);
+			AuthUser authUser = authResponse.getData();
+			User user = userService.oAuthLogin(authUser, OAuthPlatForm.GITHUB, request);
+		} catch (Throwable ignored) {
+		}
 		// 重定向到前端页面
 		try {
 			response.sendRedirect(websiteUrl);
@@ -137,7 +166,16 @@ public class OAuthController {
 		String url = authGiteeRequest.authorize(AuthStateUtils.createState());
 		// 直接重定向到url
 		try {
-			response.sendRedirect(url);
+			if (giteeEnable) {
+				response.sendRedirect(url);
+			} else {
+				response.sendRedirect(websiteUrl);
+				NotifyResponse notifyResponse = new NotifyResponse();
+				notifyResponse.setType(NotifyType.ERROR);
+				notifyResponse.setTitle("Gitee登录暂时不可用");
+				notifyResponse.setContent("由于技术和测试原因，Gitee登录暂时不可用，我们正在努力解决这个问题，给您带来的不便我们深感抱歉。");
+				CommonConstant.addNotifyResponse(request, notifyResponse);
+			}
 		} catch (IOException e) {
 			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to redirect to Gitee", request);
 		}
@@ -146,16 +184,20 @@ public class OAuthController {
 
 	@RequestMapping("/gitee/callback")
 	public ResponseEntity<BaseResponse<String>> giteeCallback(AuthCallback callback, HttpServletRequest request, HttpServletResponse response) {
-		AuthGiteeRequest authGiteeRequest = getAuthGiteeRequest();
-		AuthResponse<AuthUser> authResponse = authGiteeRequest.login(callback);
-		AuthUser authUser = authResponse.getData();
-		User user = userService.oAuthLogin(authUser, OAuthPlatForm.GITEE, request);
+		try {
+			AuthGiteeRequest authGiteeRequest = getAuthGiteeRequest();
+			AuthResponse<AuthUser> authResponse = authGiteeRequest.login(callback);
+			AuthUser authUser = authResponse.getData();
+			User user = userService.oAuthLogin(authUser, OAuthPlatForm.GITEE, request);
+		} catch (Throwable ignored) {
+		}
 		// 重定向到前端页面
 		try {
 			response.sendRedirect(websiteUrl);
 		} catch (IOException e) {
 			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to redirect to website", request);
 		}
+
 		return ResultUtil.ok("Request is being processed");
 	}
 
@@ -174,12 +216,16 @@ public class OAuthController {
 		String url = authMicrosoftRequest.authorize(AuthStateUtils.createState());
 		// 直接重定向到url
 		try {
-			response.sendRedirect(url);
-			NotifyResponse notifyResponse = new NotifyResponse();
-			notifyResponse.setType(NotifyType.ERROR);
-			notifyResponse.setTitle("微软登录暂时不可用");
-			notifyResponse.setContent("由于技术和测试原因，微软登录暂时不可用，我们正在努力解决这个问题，给您带来的不便我们深感抱歉。");
-			CommonConstant.addNotifyResponse(request, notifyResponse);
+			if (microsoftEnable) {
+				response.sendRedirect(url);
+			} else {
+				response.sendRedirect(websiteUrl);
+				NotifyResponse notifyResponse = new NotifyResponse();
+				notifyResponse.setType(NotifyType.ERROR);
+				notifyResponse.setTitle("微软登录暂时不可用");
+				notifyResponse.setContent("由于技术和测试原因，微软登录暂时不可用，我们正在努力解决这个问题，给您带来的不便我们深感抱歉。");
+				CommonConstant.addNotifyResponse(request, notifyResponse);
+			}
 		} catch (IOException e) {
 			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to redirect to Microsoft", request);
 		}
@@ -188,15 +234,86 @@ public class OAuthController {
 
 	@RequestMapping("/microsoft/callback")
 	public ResponseEntity<BaseResponse<String>> microsoftCallback(AuthCallback callback, HttpServletRequest request, HttpServletResponse response) {
-		AuthMicrosoftRequest authMicrosoftRequest = getAuthMicrosoftRequest();
-		AuthResponse<AuthUser> authResponse = authMicrosoftRequest.login(callback);
-		AuthUser authUser = authResponse.getData();
-		User user = userService.oAuthLogin(authUser, OAuthPlatForm.MICROSOFT, request);
+		try {
+			AuthMicrosoftRequest authMicrosoftRequest = getAuthMicrosoftRequest();
+			AuthResponse<AuthUser> authResponse = authMicrosoftRequest.login(callback);
+			AuthUser authUser = authResponse.getData();
+			User user = userService.oAuthLogin(authUser, OAuthPlatForm.MICROSOFT, request);
+		} catch (Throwable ignored) {
+		}
 		// 重定向到前端页面
 		try {
 			response.sendRedirect(websiteUrl);
 		} catch (IOException e) {
 			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to redirect to website", request);
+		}
+
+		return ResultUtil.ok("Request is being processed");
+	}
+
+	public AuthQqRequest getAuthQqRequest() {
+		return new AuthQqRequest(AuthConfig.builder()
+				.clientId(qqClientId)
+				.clientSecret(qqClientSecret)
+				.redirectUri(qqRedirectUri)
+				.build());
+	}
+
+	@GetMapping("/qq")
+	public ResponseEntity<BaseResponse<String>> qq(HttpServletRequest request, HttpServletResponse response) {
+		AuthQqRequest authQqRequest = getAuthQqRequest();
+		String url = authQqRequest.authorize(AuthStateUtils.createState());
+		// 直接重定向到url
+		try {
+			if (qqEnable) {
+				response.sendRedirect(url);
+			} else {
+				response.sendRedirect(websiteUrl);
+				NotifyResponse notifyResponse = new NotifyResponse();
+				notifyResponse.setType(NotifyType.ERROR);
+				notifyResponse.setTitle("QQ登录暂时不可用");
+				notifyResponse.setContent("由于技术和测试原因，QQ登录暂时不可用，我们正在努力解决这个问题，给您带来的不便我们深感抱歉。");
+				CommonConstant.addNotifyResponse(request, notifyResponse);
+			}
+		} catch (IOException e) {
+			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to redirect to QQ", request);
+		}
+		return ResultUtil.ok(url);
+	}
+
+	@RequestMapping("/qq/callback")
+	public ResponseEntity<BaseResponse<String>> qqCallback(AuthCallback callback, HttpServletRequest request, HttpServletResponse response) {
+		try {
+			AuthQqRequest authQqRequest = getAuthQqRequest();
+			AuthResponse<AuthUser> authResponse = authQqRequest.login(callback);
+			AuthUser authUser = authResponse.getData();
+			User user = userService.oAuthLogin(authUser, OAuthPlatForm.QQ, request);
+		} catch (Throwable ignored) {
+		}
+		// 重定向到前端页面
+		try {
+			response.sendRedirect(websiteUrl);
+		} catch (IOException e) {
+			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to redirect to website", request);
+		}
+		return ResultUtil.ok("Request is being processed");
+	}
+
+	@GetMapping("/bilibili")
+	public ResponseEntity<BaseResponse<String>> bilibili(HttpServletRequest request, HttpServletResponse response) {
+		// 直接重定向到url
+		try {
+			if (bilibiliEnable) {
+			} else {
+				response.sendRedirect(websiteUrl);
+				NotifyResponse notifyResponse = new NotifyResponse();
+				notifyResponse.setType(NotifyType.ERROR);
+				notifyResponse.setTitle("哔哩哔哩登录暂时不可用");
+				notifyResponse.setContent("由于技术和测试原因，哔哩哔哩登录暂时不可用，我们正在努力解决这个问题，给您带来的不便我们深感抱歉。");
+				CommonConstant.addNotifyResponse(request, notifyResponse);
+			}
+		} catch (IOException e) {
+			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to redirect to QQ", request);
 		}
 		return ResultUtil.ok("Request is being processed");
 	}

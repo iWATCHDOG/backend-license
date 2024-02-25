@@ -82,13 +82,43 @@ public class UserController {
 	@Value("${captcha.secret-key}")
 	private String captchaAppSecretKey;
 
+	public void checkCaptcha(HttpServletRequest request) {
+		if (TENCENT_CAPTCHA_UTIL == null) {
+			// init
+			TENCENT_CAPTCHA_UTIL = new TencentCaptchaUtil(tencentSecretId, tencentSecretKey, captchaAppSecretKey);
+		}
+		// 获取Header里的captcha
+		String captcha = request.getHeader(CAPTCHA_HEADER);
+		// 将captcha转换为CaptchaResult
+		CaptchaResult captchaResult = GsonProvider.normal().fromJson(captcha, CaptchaResult.class);
+		if (captchaResult == null) {
+			throw new BusinessException(ReturnCode.VALIDATION_FAILED, "请进行人机验证", request);
+		}
+		// 验证captcha
+		try {
+			TENCENT_CAPTCHA_UTIL.isCaptchaValid(captchaResult, Long.parseLong(captchaAppId), request);
+		} catch (TencentCloudSDKException e) {
+			throw new BusinessException(ReturnCode.SYSTEM_ERROR, e.getMessage(), request);
+		}
+	}
+
 	@PostMapping("/create")
-	public ResponseEntity<BaseResponse<Boolean>> userCreate(UserCreateRequest userCreateRequest, HttpServletRequest request) {
-		return ResultUtil.ok(userService.userCreate(userCreateRequest, request));
+	public ResponseEntity<BaseResponse<UserVO>> userCreate(UserCreateRequest userCreateRequest, HttpServletRequest request) {
+		checkCaptcha(request);
+		User user = userService.userCreate(userCreateRequest, request);
+		UserVO userVO = user.toUserVO();
+		// 获取Token
+		String token = request.getSession().getAttribute(LOGIN_TOKEN).toString();
+		userVO.setToken(token);
+		long uid = user.getUid();
+		Permission ret = permissionService.getMaxPriorityGroupP(uid);
+		userVO.setGroup(ret);
+		return ResultUtil.ok(userVO);
 	}
 
 	@PostMapping("create/email")
 	public ResponseEntity<BaseResponse<Boolean>> userCreateEmail(String email, HttpServletRequest request) {
+		checkCaptcha(request);
 		boolean check = userService.checkEmail(email, request);
 		if (!check) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "邮箱已被注册", email, request);
@@ -101,6 +131,7 @@ public class UserController {
 
 	@PostMapping("forget/email")
 	public ResponseEntity<BaseResponse<String>> forgetPasswordEmail(String email, HttpServletRequest request) {
+		checkCaptcha(request);
 		User user = userService.getByEmail(email, request);
 		if (user != null) {
 			String token = UUID.randomUUID().toString();
@@ -112,6 +143,7 @@ public class UserController {
 
 	@PostMapping("forget/password")
 	public ResponseEntity<BaseResponse<Boolean>> forgetPassword(String password, HttpServletRequest request) {
+		checkCaptcha(request);
 		String token = request.getHeader(FORGET_TOKEN);
 		if (StringUtils.isAllBlank(token, password)) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数错误", request);
@@ -136,23 +168,7 @@ public class UserController {
 
 	@GetMapping("/login")
 	public ResponseEntity<BaseResponse<UserVO>> userLogin(UserLoginRequest userLoginRequest, HttpServletRequest request) {
-		if (TENCENT_CAPTCHA_UTIL == null) {
-			// init
-			TENCENT_CAPTCHA_UTIL = new TencentCaptchaUtil(tencentSecretId, tencentSecretKey, captchaAppSecretKey);
-		}
-		// 获取Header里的captcha
-		String captcha = request.getHeader(CAPTCHA_HEADER);
-		// 将captcha转换为CaptchaResult
-		CaptchaResult captchaResult = GsonProvider.normal().fromJson(captcha, CaptchaResult.class);
-		if (captchaResult == null) {
-			throw new BusinessException(ReturnCode.VALIDATION_FAILED, "请进行人机验证", request);
-		}
-		// 验证captcha
-		try {
-			TENCENT_CAPTCHA_UTIL.isCaptchaValid(captchaResult, Long.parseLong(captchaAppId), request);
-		} catch (TencentCloudSDKException e) {
-			throw new BusinessException(ReturnCode.SYSTEM_ERROR, e.getMessage(), request);
-		}
+		checkCaptcha(request);
 		User user = userService.userLogin(userLoginRequest, request);
 		UserVO userVO = user.toUserVO();
 		// 获取Token

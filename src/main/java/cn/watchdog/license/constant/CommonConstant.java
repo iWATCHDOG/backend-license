@@ -28,6 +28,8 @@ public interface CommonConstant {
 	 */
 	String CAPTCHA_HEADER = "captcha";
 
+	String CAPTCHA_BYPASS_TOKEN = "captchaBypassToken";
+
 	/**
 	 * 通知列表
 	 */

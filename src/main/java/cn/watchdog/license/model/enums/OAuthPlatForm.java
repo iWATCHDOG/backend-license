@@ -27,7 +27,11 @@ public enum OAuthPlatForm {
 	/**
 	 * Microsoft
 	 */
-	MICROSOFT(6, "Microsoft");
+	MICROSOFT(6, "Microsoft"),
+	/**
+	 * Bilibili
+	 */
+	BILIBILI(7, "哔哩哔哩");
 	final int code;
 	final String name;
 

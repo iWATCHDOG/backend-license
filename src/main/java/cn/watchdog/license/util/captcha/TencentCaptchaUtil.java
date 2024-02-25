@@ -58,7 +58,7 @@ public class TencentCaptchaUtil {
 		 */
 		long captchaCode = resp.getCaptchaCode();
 		String requestId = resp.getRequestId();
-		String captchaMsg = "RequestId: " + requestId;
+		String captchaMsg = "";
 		if (captchaCode == 1) {
 			/*
 			  无感验证模式下，该参数返回验证结果：

@@ -19,9 +19,11 @@ import cn.watchdog.license.model.entity.User;
 import cn.watchdog.license.model.enums.SecurityType;
 import cn.watchdog.license.model.enums.UserGender;
 import cn.watchdog.license.model.enums.UserStatus;
+import cn.watchdog.license.model.vo.SecurityLogVO;
 import cn.watchdog.license.model.vo.UserVO;
 import cn.watchdog.license.service.MailService;
 import cn.watchdog.license.service.PermissionService;
+import cn.watchdog.license.service.PhotoService;
 import cn.watchdog.license.service.SecurityLogService;
 import cn.watchdog.license.service.UserService;
 import cn.watchdog.license.service.impl.UserServiceImpl;
@@ -54,6 +56,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
 
@@ -72,6 +75,8 @@ public class UserController {
 	@Resource
 	private SecurityLogService securityLogService;
 	@Resource
+	private PhotoService photoService;
+	@Resource
 	private MailService mailService;
 	@Value("${tencent.secret-id}")
 	private String tencentSecretId;
@@ -81,8 +86,13 @@ public class UserController {
 	private String captchaAppId;
 	@Value("${captcha.secret-key}")
 	private String captchaAppSecretKey;
+	@Value("${captcha.enable}")
+	private boolean captchaEnable;
 
 	public void checkCaptcha(HttpServletRequest request) {
+		if (!captchaEnable) {
+			return;
+		}
 		if (TENCENT_CAPTCHA_UTIL == null) {
 			// init
 			TENCENT_CAPTCHA_UTIL = new TencentCaptchaUtil(tencentSecretId, tencentSecretKey, captchaAppSecretKey);
@@ -295,7 +305,12 @@ public class UserController {
 		if (user == null) {
 			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "用户不存在", uid, request);
 		}
-		File file = new File(user.getAvatar());
+		Path path = photoService.getPhotoPathByMd5(user.getAvatar());
+		if (path == null) {
+			userService.generateDefaultAvatar(user, request);
+			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "头像文件不存在", uid, request);
+		}
+		File file = new File(path.toString());
 		if (!file.exists()) {
 			userService.generateDefaultAvatar(user, request);
 			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "头像文件不存在", uid, request);
@@ -397,7 +412,7 @@ public class UserController {
 
 	@GetMapping("/security/log")
 	@AuthCheck()
-	public ResponseEntity<BaseResponse<Page<SecurityLog>>> getSecurityLogList(UserSecurityLogQueryRequest userSecurityLogQueryRequest, HttpServletRequest request) {
+	public ResponseEntity<BaseResponse<Page<SecurityLogVO>>> getSecurityLogList(UserSecurityLogQueryRequest userSecurityLogQueryRequest, HttpServletRequest request) {
 		if (userSecurityLogQueryRequest == null) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数错误", request);
 		}
@@ -440,6 +455,12 @@ public class UserController {
 		queryWrapper.eq(uid != null, "uid", uid);
 		queryWrapper.orderBy(StringUtils.isNotBlank(sortField), sortOrder.equals(CommonConstant.SORT_ORDER_ASC), sortField);
 		Page<SecurityLog> securityLogPage = securityLogService.page(new Page<>(current, size), queryWrapper);
-		return ResultUtil.ok(securityLogPage);
+		Page<SecurityLogVO> securityLogVOPage = new Page<>();
+		securityLogVOPage.setCurrent(securityLogPage.getCurrent());
+		securityLogVOPage.setSize(securityLogPage.getSize());
+		securityLogVOPage.setTotal(securityLogPage.getTotal());
+		securityLogVOPage.setPages(securityLogPage.getPages());
+		securityLogVOPage.setRecords(securityLogPage.getRecords().stream().map(SecurityLog::toVO).toList());
+		return ResultUtil.ok(securityLogVOPage);
 	}
 }

@@ -68,6 +68,14 @@ public class LogInterceptor {
 		String url = request.getRequestURI();
 		// 获取cookies
 		Cookie[] cookies = request.getCookies();
+		// 获取请求headers传的time。
+		String timeStr = request.getHeader("time");
+		// 计算ping
+		long ping = 0;
+		if (timeStr != null) {
+			long timeLong = Long.parseLong(timeStr);
+			ping = time - timeLong;
+		}
 		// 获取请求参数
 		Object[] args = point.getArgs();
 		String reqParam = null;
@@ -119,6 +127,7 @@ public class LogInterceptor {
 					requestInfo.setRequestId(requestId);
 					requestInfo.setTimestamp(time);
 					requestInfo.setCost(totalTimeMillis);
+					requestInfo.setPing(ping);
 					baseResponse.setRequestInfo(requestInfo);
 					Object data = baseResponse.getData();
 					if (url.startsWith("/notify")) {
@@ -131,7 +140,6 @@ public class LogInterceptor {
 								List list = GsonProvider.normal().fromJson(dataStr, List.class);
 								saveLog = list != null && !list.isEmpty();
 							} catch (Throwable ignored) {
-								saveLog = false;
 							}
 						}
 					}

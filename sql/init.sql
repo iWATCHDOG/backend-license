@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS `security_log`
 (
     id         BIGINT AUTO_INCREMENT              NOT NULL COMMENT 'id' PRIMARY KEY,
     uid        BIGINT                             NULL COMMENT 'uid',
+    avatar     TEXT                               NULL COMMENT '头像信息',
     title      VARCHAR(64)                        NOT NULL COMMENT '标题',
     types      VARCHAR(36)                        NOT NULL COMMENT '类型',
     ip         VARCHAR(32)                        NULL COMMENT 'ip',
@@ -88,6 +89,17 @@ CREATE TABLE IF NOT EXISTS `blacklist`
 (
     id         BIGINT AUTO_INCREMENT              NOT NULL COMMENT 'id' PRIMARY KEY,
     ip         VARCHAR(32)                        NOT NULL COMMENT 'ip',
+    createTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
+    updateTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    available  BOOL     DEFAULT TRUE              NOT NULL COMMENT '是否可用'
+);
+
+CREATE TABLE IF NOT EXISTS `photo`
+(
+    pid        BIGINT AUTO_INCREMENT              NOT NULL COMMENT 'pid' PRIMARY KEY,
+    md5        VARCHAR(32)                        NOT NULL COMMENT 'md5',
+    ext        VARCHAR(16)                        NOT NULL COMMENT '扩展名',
+    size       BIGINT                             NOT NULL COMMENT '大小',
     createTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
     updateTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     available  BOOL     DEFAULT TRUE              NOT NULL COMMENT '是否可用'

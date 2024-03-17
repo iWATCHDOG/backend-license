@@ -46,6 +46,7 @@ public class BaseResponse<T> implements Serializable {
 	public static class RequestInfo {
 		private String requestId;
 		private long timestamp;
+		private long ping;
 		private long cost;
 	}
 }

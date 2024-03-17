@@ -80,9 +80,15 @@ public class AdminController {
 					", 密码：" + user.getPassword() +
 					"，邮箱：" + user.getEmail() +
 					"，手机号：" + user.getPhone() +
-					"，状态：" + UserStatus.valueOf(user.getStatus()).getDesc();
+					"，状态：" + UserStatus.valueOf(user.getStatus()).getDesc() + " uid:" + user.getUid();
 			securityLog.setInfo(info);
 			securityLog.setIp(NetUtil.getIpAddress(request));
+			List<SecurityLog.AvatarData> avatarData = List.of(
+					new SecurityLog.AvatarData(1, cu.getUid()),
+					new SecurityLog.AvatarData(1, user.getUid())
+			);
+			SecurityLog.Avatar avatar = new SecurityLog.Avatar(avatarData);
+			securityLog.initAvatar(avatar);
 			securityLogService.save(securityLog);
 		}
 		return ResultUtil.ok(save);
@@ -108,9 +114,15 @@ public class AdminController {
 			securityLog.setTitle("[管理员] " + cu.getUsername());
 			securityLog.setTypesByList(List.of(SecurityType.CHANGE_PASSWORD, SecurityType.ADMIN_OPERATION));
 			String info = "重置用户密码：" + user.getUsername() +
-					"，新密码：" + password;
+					"，新密码：" + password + " uid:" + uid;
 			securityLog.setInfo(info);
 			securityLog.setIp(NetUtil.getIpAddress(request));
+			List<SecurityLog.AvatarData> avatarData = List.of(
+					new SecurityLog.AvatarData(1, cu.getUid()),
+					new SecurityLog.AvatarData(1, user.getUid())
+			);
+			SecurityLog.Avatar avatar = new SecurityLog.Avatar(avatarData);
+			securityLog.initAvatar(avatar);
 			securityLogService.save(securityLog);
 		}
 		return ResultUtil.ok(save);
@@ -136,9 +148,15 @@ public class AdminController {
 			securityLog.setUid(cu.getUid());
 			securityLog.setTitle("[管理员] " + cu.getUsername());
 			securityLog.setTypesByList(List.of(SecurityType.DELETE_USER, SecurityType.ADMIN_OPERATION));
-			String info = "删除用户：" + user.getUsername();
+			String info = "删除用户：" + user.getUsername() + " uid:" + uid;
 			securityLog.setInfo(info);
 			securityLog.setIp(NetUtil.getIpAddress(request));
+			List<SecurityLog.AvatarData> avatarData = List.of(
+					new SecurityLog.AvatarData(1, cu.getUid()),
+					new SecurityLog.AvatarData(1, user.getUid())
+			);
+			SecurityLog.Avatar avatar = new SecurityLog.Avatar(avatarData);
+			securityLog.initAvatar(avatar);
 			securityLogService.save(securityLog);
 		}
 		return ResultUtil.ok(save);
@@ -164,9 +182,15 @@ public class AdminController {
 			securityLog.setTitle("[管理员] " + cu.getUsername());
 			securityLog.setTypesByList(List.of(SecurityType.UPDATE_PROFILE, SecurityType.ADMIN_OPERATION));
 			String info = "设置用户状态：" + user.getUsername() +
-					"，状态：" + userStatus.getDesc();
+					"，状态：" + userStatus.getDesc() + " uid:" + uid;
 			securityLog.setInfo(info);
 			securityLog.setIp(NetUtil.getIpAddress(request));
+			List<SecurityLog.AvatarData> avatarData = List.of(
+					new SecurityLog.AvatarData(1, cu.getUid()),
+					new SecurityLog.AvatarData(1, user.getUid())
+			);
+			SecurityLog.Avatar avatar = new SecurityLog.Avatar(avatarData);
+			securityLog.initAvatar(avatar);
 			securityLogService.save(securityLog);
 		}
 		return ResultUtil.ok(save);

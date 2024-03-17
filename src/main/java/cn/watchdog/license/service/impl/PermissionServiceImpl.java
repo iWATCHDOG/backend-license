@@ -106,7 +106,7 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 			String oldPermission = permissionQuery.getPermission();
 			long oldExpiry = permissionQuery.getExpiry();
 			// 构造日志
-			securityLog.setTitle("修改权限");
+			securityLog.setTitles("修改权限", oldPermission);
 			List<SecurityType> st = new ArrayList<>(List.of(SecurityType.UPDATE_PERMISSION));
 			if (admin) {
 				st.add(SecurityType.ADMIN_OPERATION);
@@ -137,13 +137,20 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 				this.updateById(permissionQuery);
 			}
 			this.updateById(permissionQuery);
+			List<SecurityLog.AvatarData> avatarData = new ArrayList<>();
+			avatarData.add(new SecurityLog.AvatarData(1, uid));
+			User cu = userService.getLoginUser(request);
+			if (admin) {
+				avatarData.add(new SecurityLog.AvatarData(1, cu.getUid()));
+			}
+			SecurityLog.Avatar avatar = new SecurityLog.Avatar(avatarData);
+			securityLog.initAvatar(avatar);
 			securityLogService.save(securityLog);
 			if (admin) {
-				User cu = userService.getLoginUser(request);
 				securityLog.setId(null);
 				securityLog.setUid(cu.getUid());
 				securityLog.setIp(NetUtil.getIpAddress(request));
-				securityLog.setTitles("修改权限", permissionQuery.getUid());
+				securityLog.setTitles("修改权限", uid, oldPermission);
 				info.append("，操作人：").append(cu.getUsername());
 				securityLog.setInfo(info.toString());
 				securityLogService.save(securityLog);
@@ -182,9 +189,16 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 		String ep = "{date:" + expiry + "}";
 		String sp = "{permission:" + permission + "}";
 		securityLog.setInfo("添加权限：" + sp + "，过期时间：" + ep);
+		List<SecurityLog.AvatarData> avatarData = new ArrayList<>();
+		avatarData.add(new SecurityLog.AvatarData(1, uid));
+		User cu = userService.getLoginUser(request);
+		if (admin) {
+			avatarData.add(new SecurityLog.AvatarData(1, cu.getUid()));
+		}
+		SecurityLog.Avatar avatar = new SecurityLog.Avatar(avatarData);
+		securityLog.initAvatar(avatar);
 		securityLogService.save(securityLog);
 		if (admin) {
-			User cu = userService.getLoginUser(request);
 			securityLog.setId(null);
 			securityLog.setUid(cu.getUid());
 			securityLog.setIp(NetUtil.getIpAddress(request));
@@ -242,9 +256,16 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 		}
 		securityLog.setTypesByList(st);
 		securityLog.setIp(NetUtil.getIpAddress(request));
+		List<SecurityLog.AvatarData> avatarData = new ArrayList<>();
+		avatarData.add(new SecurityLog.AvatarData(1, uid));
+		User cu = userService.getLoginUser(request);
+		if (admin) {
+			avatarData.add(new SecurityLog.AvatarData(1, cu.getUid()));
+		}
+		SecurityLog.Avatar avatar = new SecurityLog.Avatar(avatarData);
+		securityLog.initAvatar(avatar);
 		securityLogService.save(securityLog);
 		if (admin) {
-			User cu = userService.getLoginUser(request);
 			securityLog.setId(null);
 			securityLog.setUid(cu.getUid());
 			securityLog.setIp(NetUtil.getIpAddress(request));

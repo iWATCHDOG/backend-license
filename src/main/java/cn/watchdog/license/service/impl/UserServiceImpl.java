@@ -17,6 +17,7 @@ import cn.watchdog.license.model.enums.OAuthPlatForm;
 import cn.watchdog.license.model.enums.SecurityType;
 import cn.watchdog.license.model.enums.UserGender;
 import cn.watchdog.license.model.enums.UserStatus;
+import cn.watchdog.license.service.PhotoService;
 import cn.watchdog.license.service.SecurityLogService;
 import cn.watchdog.license.service.UserService;
 import cn.watchdog.license.util.CaffeineFactory;
@@ -42,6 +43,7 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.util.DigestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
@@ -74,6 +76,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 	private static final Cache<Long, User> userCache = CaffeineFactory.newBuilder().expireAfterWrite(3, TimeUnit.SECONDS).build();
 	@Resource
 	private OAuthMapper oAuthMapper;
+	@Resource
+	private PhotoService photoService;
 	@Resource
 	private SecurityLogService securityLogService;
 	@Resource
@@ -522,13 +526,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		if (StringUtils.isBlank(avatar)) {
 			return;
 		}
-		Path path = Paths.get(avatar);
-		try {
-			Files.deleteIfExists(path);
-		} catch (IOException e) {
-			log.error("Failed to delete avatar: {}", avatar);
-			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "Failed to delete avatar", request);
-		}
+		user.setAvatar(null);
+		this.updateById(user);
 	}
 
 	@Override
@@ -541,11 +540,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			okhttp3.Response res = client.newCall(req).execute();
 			InputStream inputStream = Objects.requireNonNull(res.body()).byteStream();
 			String ext = Objects.requireNonNull(res.body().contentType()).subtype();
-			String fileName = "avatar." + ext;
-			Path path = Paths.get("avatars", String.valueOf(user.getUid()), fileName);
+			byte[] data = res.body().bytes();
+			String md5 = DigestUtils.md5DigestAsHex(data);
+			String fileName = md5 + "." + ext;
+			photoService.savePhotoByMd5(md5, ext, data.length);
+			Path path = Paths.get("photos", fileName);
 			Files.createDirectories(path.getParent());
 			Files.copy(inputStream, path, StandardCopyOption.REPLACE_EXISTING);
-			user.setAvatar(path.toString());
+			user.setAvatar(md5);
 			this.updateById(user);
 			userCache.invalidate(user.getUid());
 		} catch (IOException e) {
@@ -562,6 +564,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
 	@Override
 	public void setupAvatar(User user, MultipartFile file, HttpServletRequest request) {
+		// 获取旧头像
+		String oldAvatar = user.getAvatar();
 		clearAvatar(user, request);
 		if (file == null || file.isEmpty()) {
 			throw new BusinessException(ReturnCode.FORBIDDEN_ERROR, "图片为空", request);
@@ -573,12 +577,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			Thumbnails.of(file.getInputStream()).size(460, 460).toOutputStream(stream);
 			// 获取图片类型拓展名
 			String ext = Objects.requireNonNull(file.getOriginalFilename()).substring(file.getOriginalFilename().lastIndexOf("."));
-			String fileName = "avatar" + ext;
-			Path path = Paths.get("avatars", String.valueOf(user.getUid()), fileName);
+			byte[] data = file.getBytes();
+			String md5 = DigestUtils.md5DigestAsHex(data);
+			String fileName = md5 + ext;
+			photoService.savePhotoByMd5(md5, ext, data.length);
+			Path path = Paths.get("photos", fileName);
 			Files.createDirectories(path.getParent());
 			byte[] bytes = stream.toByteArray();
 			Files.write(path, bytes);
-			user.setAvatar(path.toString());
+			user.setAvatar(md5);
 			this.updateById(user);
 			userCache.invalidate(user.getUid());
 		} catch (IOException e) {
@@ -597,6 +604,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		List<SecurityType> st = List.of(SecurityType.CHANGE_AVATAR);
 		securityLog.setTypesByList(st);
 		securityLog.setIp(NetUtil.getIpAddress(request));
+		// 获取新头像
+		String newAvatar = user.getAvatar();
+		List<SecurityLog.AvatarData> avatarData = new ArrayList<>();
+		if (StringUtils.isNotBlank(oldAvatar)) {
+			// 有旧头像
+			avatarData.add(new SecurityLog.AvatarData(2, oldAvatar));
+		}
+		avatarData.add(new SecurityLog.AvatarData(2, newAvatar));
+		SecurityLog.Avatar avatar = new SecurityLog.Avatar(avatarData);
+		securityLog.initAvatar(avatar);
 		securityLogService.save(securityLog);
 	}
 
@@ -630,11 +647,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		g.dispose();
 
 		try {
-			String fileName = "avatar.png";
-			Path path = Paths.get("avatars", String.valueOf(user.getUid()), fileName);
+			String md5 = DigestUtils.md5DigestAsHex((character + textColor.getBlue() + textColor.getGreen() + textColor.getRed()).getBytes());
+			String ext = "png";
+			String fileName = md5 + "." + ext;
+			photoService.savePhotoByMd5(md5, ext, 4300);
+			Path path = Paths.get("photos", fileName);
 			Files.createDirectories(path.getParent());
 			ImageIO.write(image, "png", path.toFile());
-			user.setAvatar(path.toString());
+			user.setAvatar(md5);
 			this.updateById(user);
 			userCache.invalidate(user.getUid());
 		} catch (IOException e) {

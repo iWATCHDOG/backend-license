@@ -159,6 +159,9 @@ public class LogInterceptor {
 		} else if (url.startsWith("/user/get/avatar/")) {
 			// 如果是avatar请求，不记录日志
 			saveLog = false;
+		} else if (url.startsWith("/photo")) {
+			// 如果是photo请求，不记录日志
+			saveLog = false;
 		}
 		if (saveLog) {
 			User user = userService.getLoginUserIgnoreError(request);

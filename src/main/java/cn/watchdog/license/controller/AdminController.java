@@ -382,7 +382,8 @@ public class AdminController {
 	@GetMapping("/count/user")
 	@AuthCheck(must = "*")
 	public ResponseEntity<BaseResponse<Long>> countUser(HttpServletRequest request) {
-		long count = userService.count();
+		// 筛选出非删除状态的用户
+		long count = userService.lambdaQuery().eq(User::getStatus, UserStatus.NORMAL.getCode()).count();
 		return ResultUtil.ok(count);
 	}
 

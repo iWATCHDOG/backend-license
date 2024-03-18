@@ -46,7 +46,7 @@ public class IpRegionUtil {
 			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "无法创建向量索引缓存搜索器" + dbPath, null);
 		}
 
-		Region r = new Region();
+		Region r = new Region(ip);
 		// 3、查询
 		try {
 			long sTime = System.nanoTime();
@@ -78,6 +78,7 @@ public class IpRegionUtil {
 
 	@Data
 	public static class Region {
+		private final String ip;
 		/**
 		 * 国家
 		 */

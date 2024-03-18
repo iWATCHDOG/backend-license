@@ -59,7 +59,7 @@ public class InitializationRunner implements ApplicationRunner {
 				userService.generateDefaultAvatar(user, null);
 				permissionService.addPermission(user.getUid(), "*", 0, true, null);
 				try {
-					Files.write(Paths.get("admin.txt"), String.format("用户名: %s\n密码: %s\n邮箱: %s\n请网站管理员在登录后及时修改账户信息（用户名、密码、邮箱等）。", userName, userPassword, userEmail).getBytes());
+					Files.write(Paths.get("data", "admin.txt"), String.format("用户名: %s\n密码: %s\n邮箱: %s\n请网站管理员在登录后及时修改账户信息（用户名、密码、邮箱等）。", userName, userPassword, userEmail).getBytes());
 				} catch (IOException e) {
 					log.error("创建管理员账户信息文件失败", e);
 				}

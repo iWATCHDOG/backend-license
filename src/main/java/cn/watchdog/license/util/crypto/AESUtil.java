@@ -66,8 +66,8 @@ public class AESUtil {
 
 	public static void init() {
 		// 判断config目录是否存在AES密钥，不存在则创建
-		Path config = Paths.get("config");
-		Path aesKey = Paths.get("config", "aes.key");
+		Path config = Paths.get("data");
+		Path aesKey = Paths.get("data", "aes.key");
 		if (!Files.exists(aesKey)) {
 			log.warn("检测到当前AES密钥不存在，正在创建AES密钥。");
 			try {

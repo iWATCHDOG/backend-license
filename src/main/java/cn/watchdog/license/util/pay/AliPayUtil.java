@@ -32,9 +32,9 @@ public class AliPayUtil {
 		// 公钥路径"./foo/alipay/public.txt"
 		// 从文件中读取字符串，赋值给privateKey和publicKey
 		try {
-			this.privateKey = new String(Files.readAllBytes(Paths.get("./profile/alipay/privateKey.txt")));
+			this.privateKey = new String(Files.readAllBytes(Paths.get("./data/alipay/privateKey.txt")));
 			if (!certificate) {
-				this.publicKey = new String(Files.readAllBytes(Paths.get("./profile/alipay/publicKey.txt")));
+				this.publicKey = new String(Files.readAllBytes(Paths.get("./data/alipay/publicKey.txt")));
 			}
 		} catch (IOException e) {
 			log.error("读取支付宝公钥和私钥失败", e);
@@ -65,9 +65,9 @@ public class AliPayUtil {
 
 		if (certificate) {
 			//注：证书文件路径支持设置为文件系统中的路径或CLASS_PATH中的路径，优先从文件系统中加载，加载失败后会继续尝试从CLASS_PATH中加载
-			config.merchantCertPath = "./profile/alipay/appCertPublicKey.crt";
-			config.alipayCertPath = "./profile/alipay/alipayCertPublicKey.crt";
-			config.alipayRootCertPath = "./profile/alipay/alipayRootCert.crt";
+			config.merchantCertPath = "./data/alipay/appCertPublicKey.crt";
+			config.alipayCertPath = "./data/alipay/alipayCertPublicKey.crt";
+			config.alipayRootCertPath = "./data/alipay/alipayRootCert.crt";
 		} else {
 			//注：如果采用非证书模式，则无需赋值上面的三个证书路径，改为赋值如下的支付宝公钥字符串即可
 			config.alipayPublicKey = publicKey;

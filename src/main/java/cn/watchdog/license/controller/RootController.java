@@ -6,11 +6,14 @@ import cn.watchdog.license.constant.CommonConstant;
 import cn.watchdog.license.model.dto.NotifyRequest;
 import cn.watchdog.license.model.dto.NotifyResponse;
 import cn.watchdog.license.model.enums.NotifyType;
+import cn.watchdog.license.util.IpRegionUtil;
+import cn.watchdog.license.util.NetUtil;
 import cn.watchdog.license.util.VersionUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -50,4 +53,13 @@ public class RootController {
 		return ResultUtil.ok("ok");
 	}
 
+	@RequestMapping("/ip/{ip}")
+	public ResponseEntity<BaseResponse<IpRegionUtil.Region>> getIpRegion(@PathVariable("ip") String ip, HttpServletRequest request) {
+		return ResultUtil.ok(IpRegionUtil.getInstance().search(ip));
+	}
+
+	@RequestMapping("/ip")
+	public ResponseEntity<BaseResponse<IpRegionUtil.Region>> getIpRegion(HttpServletRequest request) {
+		return ResultUtil.ok(IpRegionUtil.getInstance().search(NetUtil.getIpAddress(request)));
+	}
 }

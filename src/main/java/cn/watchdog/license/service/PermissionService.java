@@ -12,11 +12,11 @@ import java.util.List;
 import java.util.Set;
 
 public interface PermissionService extends IService<Permission> {
-	Set<Permission> getUserPermissions(long uid);
+	Set<Permission> getUserPermissions(long uid, HttpServletRequest request);
 
-	boolean checkPermission(long uid, String permission);
+	boolean checkPermission(long uid, String permission, HttpServletRequest request);
 
-	Permission getPermission(long uid, String permission);
+	Permission getPermission(long uid, String permission, HttpServletRequest request);
 
 	void updatePermission(PermissionUpdateRequest permissionUpdateRequest, boolean admin, HttpServletRequest request);
 
@@ -30,11 +30,11 @@ public interface PermissionService extends IService<Permission> {
 
 	void removePermission(PermissionRemoveRequest permissionRemoveRequest, boolean admin, HttpServletRequest request);
 
-	void updatePermission(long uid, String permission, long expiry, boolean admin);
+	void updatePermission(long uid, String permission, long expiry, boolean admin, HttpServletRequest request);
 
-	List<Permission> getGroups(long uid);
+	List<Permission> getGroups(long uid, HttpServletRequest request);
 
-	Group getMaxPriorityGroup(long uid);
+	Group getMaxPriorityGroup(long uid, HttpServletRequest request);
 
-	Permission getMaxPriorityGroupP(long uid);
+	Permission getMaxPriorityGroupP(long uid, HttpServletRequest request);
 }

@@ -121,7 +121,7 @@ public class UserController {
 		String token = request.getSession().getAttribute(LOGIN_TOKEN).toString();
 		userVO.setToken(token);
 		long uid = user.getUid();
-		Permission ret = permissionService.getMaxPriorityGroupP(uid);
+		Permission ret = permissionService.getMaxPriorityGroupP(uid, request);
 		userVO.setGroup(ret);
 		return ResultUtil.ok(userVO);
 	}
@@ -185,7 +185,7 @@ public class UserController {
 		String token = request.getSession().getAttribute(LOGIN_TOKEN).toString();
 		userVO.setToken(token);
 		long uid = user.getUid();
-		Permission ret = permissionService.getMaxPriorityGroupP(uid);
+		Permission ret = permissionService.getMaxPriorityGroupP(uid, request);
 		userVO.setGroup(ret);
 		return ResultUtil.ok(userVO);
 	}
@@ -200,7 +200,7 @@ public class UserController {
 		String t = request.getSession().getAttribute(LOGIN_TOKEN).toString();
 		userVO.setToken(t);
 		long uid = user.getUid();
-		Permission ret = permissionService.getMaxPriorityGroupP(uid);
+		Permission ret = permissionService.getMaxPriorityGroupP(uid, request);
 		userVO.setGroup(ret);
 		return ResultUtil.ok(userVO);
 	}
@@ -226,7 +226,7 @@ public class UserController {
 		String token = request.getSession().getAttribute(LOGIN_TOKEN).toString();
 		userVO.setToken(token);
 		long uid = user.getUid();
-		Permission ret = permissionService.getMaxPriorityGroupP(uid);
+		Permission ret = permissionService.getMaxPriorityGroupP(uid, request);
 		userVO.setGroup(ret);
 		return ResultUtil.ok(userVO);
 	}
@@ -373,7 +373,7 @@ public class UserController {
 	public ResponseEntity<BaseResponse<List<Permission>>> getUserGroup(HttpServletRequest request) {
 		User user = userService.getLoginUser(request);
 		long uid = user.getUid();
-		List<Permission> ret = permissionService.getGroups(uid);
+		List<Permission> ret = permissionService.getGroups(uid, request);
 		return ResultUtil.ok(ret);
 	}
 
@@ -385,7 +385,7 @@ public class UserController {
 	public ResponseEntity<BaseResponse<Permission>> getMaxPriorityGroup(HttpServletRequest request) {
 		User user = userService.getLoginUser(request);
 		long uid = user.getUid();
-		Permission ret = permissionService.getMaxPriorityGroupP(uid);
+		Permission ret = permissionService.getMaxPriorityGroupP(uid, request);
 		return ResultUtil.ok(ret);
 	}
 
@@ -426,7 +426,7 @@ public class UserController {
 		Long id = userSecurityLogQueryRequest.getId();
 		Long uid = userSecurityLogQueryRequest.getUid();
 		// 如果有uid参数，查询是否有权限*
-		boolean e = permissionService.checkPermission(user.getUid(), "*");
+		boolean e = permissionService.checkPermission(user.getUid(), "*", request);
 		if (uid != null) {
 			if (!uid.equals(user.getUid())) {
 				// 如果不是查询自己的日志，需要权限

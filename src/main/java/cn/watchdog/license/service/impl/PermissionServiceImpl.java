@@ -42,7 +42,7 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 	private UserService userService;
 
 	@Override
-	public Set<Permission> getUserPermissions(long uid) {
+	public Set<Permission> getUserPermissions(long uid, HttpServletRequest request) {
 		Set<Permission> permissions = userPermissions.getIfPresent(uid);
 		if (permissions == null) {
 			Permission permissionQuery = new Permission();
@@ -57,8 +57,8 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 
 
 	@Override
-	public boolean checkPermission(long uid, String permission) {
-		Set<Permission> permissions = getUserPermissions(uid);
+	public boolean checkPermission(long uid, String permission, HttpServletRequest request) {
+		Set<Permission> permissions = getUserPermissions(uid, request);
 		for (Permission p : permissions) {
 			if (p.getExpiry() == 0 || p.getExpiry() > System.currentTimeMillis()) {
 				if (p.getPermission().isBlank()) {
@@ -71,7 +71,7 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 					return true;
 				}
 			} else {
-				removePermissionSecurityLog(p.getUid(), p.getPermission(), true, false, null);
+				removePermissionSecurityLog(p.getUid(), p.getPermission(), true, false, request);
 				this.removeById(p.getId());
 				userPermissions.invalidate(uid);
 			}
@@ -80,8 +80,8 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 	}
 
 	@Override
-	public Permission getPermission(long uid, String permission) {
-		Set<Permission> permissions = getUserPermissions(uid);
+	public Permission getPermission(long uid, String permission, HttpServletRequest request) {
+		Set<Permission> permissions = getUserPermissions(uid, request);
 		for (Permission p : permissions) {
 			if (p.getPermission().equalsIgnoreCase(permission)) {
 				return p;
@@ -164,7 +164,7 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 	@Override
 	public void addPermission(long uid, String permission, long expiry, boolean admin, HttpServletRequest request) {
 		userPermissions.invalidate(uid);
-		Permission permissionQuery = getPermission(uid, permission);
+		Permission permissionQuery = getPermission(uid, permission, request);
 		if (permissionQuery == null) {
 			permissionQuery = new Permission();
 			permissionQuery.setUid(uid);
@@ -217,7 +217,7 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 	@Override
 	public void removePermission(long uid, String permission, boolean admin, HttpServletRequest request) {
 		userPermissions.invalidate(uid);
-		Permission permissionQuery = getPermission(uid, permission);
+		Permission permissionQuery = getPermission(uid, permission, request);
 		if (permissionQuery != null) {
 			removePermissionSecurityLog(permissionQuery.getUid(), permissionQuery.getPermission(), false, admin, request);
 			this.removeById(permissionQuery.getId());
@@ -276,9 +276,9 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 	}
 
 	@Override
-	public void updatePermission(long uid, String permission, long expiry, boolean admin) {
+	public void updatePermission(long uid, String permission, long expiry, boolean admin, HttpServletRequest request) {
 		userPermissions.invalidate(uid);
-		Permission permissionQuery = getPermission(uid, permission);
+		Permission permissionQuery = getPermission(uid, permission, request);
 		if (permissionQuery != null) {
 			permissionQuery.setExpiry(expiry);
 			this.updateById(permissionQuery);
@@ -287,8 +287,8 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 	}
 
 	@Override
-	public List<Permission> getGroups(long uid) {
-		Set<Permission> permissions = getUserPermissions(uid);
+	public List<Permission> getGroups(long uid, HttpServletRequest request) {
+		Set<Permission> permissions = getUserPermissions(uid, request);
 		List<Permission> groups = new ArrayList<>();
 		for (Permission permission : permissions) {
 			if (permission.getExpiry() == 0 || permission.getExpiry() > System.currentTimeMillis()) {
@@ -299,7 +299,7 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 					groups.add(permission);
 				}
 			} else {
-				removePermissionSecurityLog(permission.getUid(), permission.getPermission(), true, false, null);
+				removePermissionSecurityLog(permission.getUid(), permission.getPermission(), true, false, request);
 				this.removeById(permission.getId());
 				userPermissions.invalidate(uid);
 			}
@@ -308,8 +308,8 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 	}
 
 	@Override
-	public Group getMaxPriorityGroup(long uid) {
-		List<Permission> groups = getGroups(uid);
+	public Group getMaxPriorityGroup(long uid, HttpServletRequest request) {
+		List<Permission> groups = getGroups(uid, request);
 		Group maxPriorityGroup = Group.DEFAULT;
 		for (Permission group : groups) {
 			try {
@@ -327,8 +327,8 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 	}
 
 	@Override
-	public Permission getMaxPriorityGroupP(long uid) {
-		List<Permission> groups = getGroups(uid);
+	public Permission getMaxPriorityGroupP(long uid, HttpServletRequest request) {
+		List<Permission> groups = getGroups(uid, request);
 		Group maxPriorityGroup = Group.DEFAULT;
 		Permission i = null;
 		for (Permission group : groups) {

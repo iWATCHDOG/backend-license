@@ -27,8 +27,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * 请求响应日志 AOP
@@ -37,7 +35,6 @@ import java.util.concurrent.ScheduledExecutorService;
 @Component
 @Slf4j
 public class LogInterceptor {
-	private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(16);
 	@Resource
 	private LogService logService;
 	@Resource
@@ -71,7 +68,7 @@ public class LogInterceptor {
 		// 获取请求headers传的time。
 		String timeStr = request.getHeader("time");
 		// 计算ping
-		long ping = 0;
+		long ping = -1;
 		if (timeStr != null) {
 			long timeLong = Long.parseLong(timeStr);
 			ping = time - timeLong;
@@ -161,6 +158,9 @@ public class LogInterceptor {
 			saveLog = false;
 		} else if (url.startsWith("/photo")) {
 			// 如果是photo请求，不记录日志
+			saveLog = false;
+		} else if (url.startsWith("/ip")) {
+			// 如果是license请求，不记录日志
 			saveLog = false;
 		}
 		if (saveLog) {

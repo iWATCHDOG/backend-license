@@ -49,14 +49,14 @@ public class AuthInterceptor {
 
 		// 拥有任意权限即通过
 		if (CollectionUtils.isNotEmpty(any)) {
-			if (any.stream().noneMatch(per -> permissionService.checkPermission(uid, per))) {
+			if (any.stream().noneMatch(per -> permissionService.checkPermission(uid, per, request))) {
 				throw new BusinessException(ReturnCode.FORBIDDEN_ERROR, "无权限", request);
 			}
 		}
 
 		// 必须有所有权限才通过
 		if (CollectionUtils.isNotEmpty(must)) {
-			if (must.stream().anyMatch(per -> !permissionService.checkPermission(uid, per))) {
+			if (must.stream().anyMatch(per -> !permissionService.checkPermission(uid, per, request))) {
 				throw new BusinessException(ReturnCode.FORBIDDEN_ERROR, "无权限", request);
 			}
 		}

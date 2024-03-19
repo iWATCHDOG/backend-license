@@ -280,7 +280,7 @@ public class AdminController {
 			UserVO userVO = new UserVO();
 			BeanUtils.copyProperties(user, userVO);
 			long uid = user.getUid();
-			Permission ret = permissionService.getMaxPriorityGroupP(uid);
+			Permission ret = permissionService.getMaxPriorityGroupP(uid, request);
 			userVO.setGroup(ret);
 			return userVO;
 		}).collect(Collectors.toList());

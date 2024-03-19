@@ -450,6 +450,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 	 */
 	@Override
 	public User getLoginUser(HttpServletRequest request) {
+		if (request == null) {
+			throw new BusinessException(ReturnCode.NOT_LOGIN_ERROR, "请求为null", null);
+		}
 		// 先判断是否已登录
 		Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
 		User currentUser = (User) userObj;

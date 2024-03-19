@@ -305,7 +305,7 @@ public class UserController {
 		if (user == null) {
 			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "用户不存在", uid, request);
 		}
-		Path path = photoService.getPhotoPathByMd5(user.getAvatar());
+		Path path = photoService.getPhotoPathByMd5(user.getAvatar(), request);
 		if (path == null) {
 			userService.generateDefaultAvatar(user, request);
 			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "头像文件不存在", uid, request);

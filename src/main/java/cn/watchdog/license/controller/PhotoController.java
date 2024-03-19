@@ -34,7 +34,7 @@ public class PhotoController {
 		if (StringUtils.isAnyBlank(md5)) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数不完全", request);
 		}
-		Path path = photoService.getPhotoPathByMd5(md5);
+		Path path = photoService.getPhotoPathByMd5(md5, request);
 		if (path == null) {
 			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "图片不存在", request);
 		}

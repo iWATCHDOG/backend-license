@@ -26,7 +26,7 @@ public class BlacklistServiceImpl extends ServiceImpl<BlacklistMapper, Blacklist
 	private LogService logService;
 
 	@Override
-	public boolean isBlacklist(String ip) {
+	public boolean isBlacklist(String ip, HttpServletRequest request) {
 		Boolean isBlacklist = blackListCache.getIfPresent(ip);
 		if (isBlacklist == null) {
 			Blacklist blacklistQuery = new Blacklist();
@@ -52,7 +52,7 @@ public class BlacklistServiceImpl extends ServiceImpl<BlacklistMapper, Blacklist
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "ip不能为空", request);
 		}
 		blackListCache.invalidate(ip);
-		if (this.isBlacklist(ip)) {
+		if (this.isBlacklist(ip, request)) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "ip已在黑名单中!", request);
 		}
 		Blacklist blacklist = new Blacklist();

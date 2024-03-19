@@ -546,7 +546,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			byte[] data = res.body().bytes();
 			String md5 = DigestUtils.md5DigestAsHex(data);
 			String fileName = md5 + "." + ext;
-			photoService.savePhotoByMd5(md5, ext, data.length);
+			photoService.savePhotoByMd5(md5, ext, data.length, request);
 			Path path = Paths.get("photos", fileName);
 			Files.createDirectories(path.getParent());
 			Files.copy(inputStream, path, StandardCopyOption.REPLACE_EXISTING);
@@ -583,7 +583,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			byte[] data = file.getBytes();
 			String md5 = DigestUtils.md5DigestAsHex(data);
 			String fileName = md5 + ext;
-			photoService.savePhotoByMd5(md5, ext, data.length);
+			photoService.savePhotoByMd5(md5, ext, data.length, request);
 			Path path = Paths.get("photos", fileName);
 			Files.createDirectories(path.getParent());
 			byte[] bytes = stream.toByteArray();
@@ -653,7 +653,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			String md5 = DigestUtils.md5DigestAsHex((character + textColor.getBlue() + textColor.getGreen() + textColor.getRed()).getBytes());
 			String ext = "png";
 			String fileName = md5 + "." + ext;
-			photoService.savePhotoByMd5(md5, ext, 4300);
+			photoService.savePhotoByMd5(md5, ext, 4300, request);
 			Path path = Paths.get("photos", fileName);
 			Files.createDirectories(path.getParent());
 			ImageIO.write(image, "png", path.toFile());

@@ -67,7 +67,7 @@ public class RateLimitingFilter implements Filter {
 		// 获取args
 		String args = GsonProvider.normal().toJson(httpServletRequest.getParameterMap());
 		// 检查是否在黑名单
-		if (blacklistService.isBlacklist(ipAddress)) {
+		if (blacklistService.isBlacklist(ipAddress, httpServletRequest)) {
 			log.warn("request was rejected because of blacklist. id: {}, ip: {}, url: {}, method: {}, args: {}", id, ipAddress, url, method, args);
 			httpServletResponse.setStatus(StatusCode.FORBIDDEN);
 			httpServletResponse.setContentType("application/json;charset=UTF-8");

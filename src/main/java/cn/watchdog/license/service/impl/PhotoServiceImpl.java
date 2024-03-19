@@ -4,6 +4,7 @@ import cn.watchdog.license.mapper.PhotoMapper;
 import cn.watchdog.license.model.entity.Photo;
 import cn.watchdog.license.service.PhotoService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -13,7 +14,7 @@ import java.nio.file.Path;
 @Slf4j
 public class PhotoServiceImpl extends ServiceImpl<PhotoMapper, Photo> implements PhotoService {
 	@Override
-	public void savePhotoByMd5(String md5, String ext, long size) {
+	public void savePhotoByMd5(String md5, String ext, long size, HttpServletRequest request) {
 		// 查询md5是否已经记录
 		Photo photo = this.lambdaQuery().eq(Photo::getMd5, md5).one();
 		if (photo != null) {
@@ -33,7 +34,7 @@ public class PhotoServiceImpl extends ServiceImpl<PhotoMapper, Photo> implements
 	}
 
 	@Override
-	public Path getPhotoPathByMd5(String md5) {
+	public Path getPhotoPathByMd5(String md5, HttpServletRequest request) {
 		Photo photo = this.lambdaQuery().eq(Photo::getMd5, md5).one();
 		if (photo == null) {
 			return null;

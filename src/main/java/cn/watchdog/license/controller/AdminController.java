@@ -318,16 +318,19 @@ public class AdminController {
 		queryWrapper.orderBy(StringUtils.isNotBlank(sortField), sortOrder.equals(CommonConstant.SORT_ORDER_ASC), sortField);
 		Page<Permission> permissionPage = permissionService.page(new Page<>(current, size), queryWrapper);
 		Page<PermissionVO> permissionVOPage = new PageDTO<>(permissionPage.getCurrent(), permissionPage.getSize(), permissionPage.getTotal());
-		List<PermissionVO> permissionVOList = permissionPage.getRecords().stream().map(p -> {
-			PermissionVO permissionVO = new PermissionVO();
-			BeanUtils.copyProperties(p, permissionVO);
-			// 设置username
-			User user = userService.getById(p.getUid());
-			if (user != null) {
-				permissionVO.setUsername(user.getUsername());
-			}
-			return permissionVO;
-		}).collect(Collectors.toList());
+		// 筛选出有效的权限
+		List<PermissionVO> permissionVOList = permissionPage.getRecords().stream()
+				.filter(p -> permissionService.checkPermission(p, request))
+				.map(p -> {
+					PermissionVO permissionVO = new PermissionVO();
+					BeanUtils.copyProperties(p, permissionVO);
+					// 设置username
+					User user = userService.getById(p.getUid());
+					if (user != null) {
+						permissionVO.setUsername(user.getUsername());
+					}
+					return permissionVO;
+				}).collect(Collectors.toList());
 		permissionVOPage.setRecords(permissionVOList);
 		return ResultUtil.ok(permissionVOPage);
 	}

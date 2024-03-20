@@ -16,6 +16,8 @@ public interface PermissionService extends IService<Permission> {
 
 	boolean checkPermission(long uid, String permission, HttpServletRequest request);
 
+	boolean checkPermission(Permission permission, HttpServletRequest request);
+
 	Permission getPermission(long uid, String permission, HttpServletRequest request);
 
 	void updatePermission(PermissionUpdateRequest permissionUpdateRequest, boolean admin, HttpServletRequest request);

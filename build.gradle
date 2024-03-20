@@ -38,7 +38,6 @@ dependencies {
     implementation 'com.google.guava:guava:33.1.0-jre'
     implementation 'org.apache.commons:commons-lang3:3.14.0'
     implementation 'com.baomidou:mybatis-plus-boot-starter:3.5.5'
-    // https://mvnrepository.com/artifact/org.mybatis/mybatis-spring
     implementation 'org.mybatis:mybatis-spring:3.0.3'
     implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8'
     implementation 'org.springframework.boot:spring-boot-starter-mail'
@@ -54,7 +53,7 @@ dependencies {
     implementation 'org.yaml:snakeyaml:2.2'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation 'com.maxmind.geoip2:geoip2:4.2.0'
-    implementation 'com.tencentcloudapi:tencentcloud-sdk-java:3.1.982'
+    implementation 'com.tencentcloudapi:tencentcloud-sdk-java:3.1.983'
     implementation 'me.zhyd.oauth:JustAuth:1.16.6'
     implementation 'org.lionsoul:ip2region:2.7.0'
 

@@ -80,6 +80,11 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 	}
 
 	@Override
+	public boolean checkPermission(Permission permission, HttpServletRequest request) {
+		return checkPermission(permission.getUid(), permission.getPermission(), request);
+	}
+
+	@Override
 	public Permission getPermission(long uid, String permission, HttpServletRequest request) {
 		Set<Permission> permissions = getUserPermissions(uid, request);
 		for (Permission p : permissions) {

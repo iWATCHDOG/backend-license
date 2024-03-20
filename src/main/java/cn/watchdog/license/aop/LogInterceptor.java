@@ -153,7 +153,7 @@ public class LogInterceptor {
 		} else if (url.startsWith("/admin/count")) {
 			// 如果是admin count请求，不记录日志
 			saveLog = false;
-		} else if (url.startsWith("/user/get/avatar/")) {
+		} else if (url.startsWith("/user/get/avatar")) {
 			// 如果是avatar请求，不记录日志
 			saveLog = false;
 		} else if (url.startsWith("/photo")) {

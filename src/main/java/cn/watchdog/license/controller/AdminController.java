@@ -45,6 +45,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @RestController
@@ -113,7 +114,8 @@ public class AdminController {
 			securityLog.setUid(cu.getUid());
 			securityLog.setTitle("[管理员] " + cu.getUsername());
 			securityLog.setTypesByList(List.of(SecurityType.CHANGE_PASSWORD, SecurityType.ADMIN_OPERATION));
-			String info = "重置用户密码：" + user.getUsername() +
+			String un = "{uid:" + user.getUid() + "}";
+			String info = "重置用户密码：" + un +
 					"，新密码：" + password + " uid:" + uid;
 			securityLog.setInfo(info);
 			securityLog.setIp(NetUtil.getIpAddress(request));
@@ -138,17 +140,25 @@ public class AdminController {
 		if (user == null) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "用户不存在", uid, request);
 		}
+		if (user.getUid() == 1) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "不能删除超级管理员", request);
+		}
+		User cu = userService.getLoginUser(request);
+		if (Objects.equals(user.getUid(), cu.getUid())) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "不能删除自己", request);
+		}
 		userService.clearOAuthByUser(user, request);
 		user.setUserStatus(UserStatus.DELETED);
 		userService.updateById(user);
 		boolean save = userService.removeById(uid);
 		if (save) {
-			User cu = userService.getLoginUser(request);
 			SecurityLog securityLog = new SecurityLog();
 			securityLog.setUid(cu.getUid());
-			securityLog.setTitle("[管理员] " + cu.getUsername());
+			String cun = "{uid:" + cu.getUid() + "}";
+			securityLog.setTitle("[管理员] " + cun);
 			securityLog.setTypesByList(List.of(SecurityType.DELETE_USER, SecurityType.ADMIN_OPERATION));
-			String info = "删除用户：" + user.getUsername() + " uid:" + uid;
+			String un = "{uid:" + user.getUid() + "}";
+			String info = "删除用户：" + un + " uid:" + uid;
 			securityLog.setInfo(info);
 			securityLog.setIp(NetUtil.getIpAddress(request));
 			List<SecurityLog.AvatarData> avatarData = List.of(
@@ -179,9 +189,11 @@ public class AdminController {
 			User cu = userService.getLoginUser(request);
 			SecurityLog securityLog = new SecurityLog();
 			securityLog.setUid(cu.getUid());
-			securityLog.setTitle("[管理员] " + cu.getUsername());
+			String cun = "{uid:" + cu.getUid() + "}";
+			securityLog.setTitle("[管理员] " + cun);
 			securityLog.setTypesByList(List.of(SecurityType.UPDATE_PROFILE, SecurityType.ADMIN_OPERATION));
-			String info = "设置用户状态：" + user.getUsername() +
+			String un = "{uid:" + user.getUid() + "}";
+			String info = "设置用户状态：" + un +
 					"，状态：" + userStatus.getDesc() + " uid:" + uid;
 			securityLog.setInfo(info);
 			securityLog.setIp(NetUtil.getIpAddress(request));

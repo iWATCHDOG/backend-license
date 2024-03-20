@@ -207,8 +207,8 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 			securityLog.setId(null);
 			securityLog.setUid(cu.getUid());
 			securityLog.setIp(NetUtil.getIpAddress(request));
-			securityLog.setTitles("添加权限", permissionQuery.getUid());
-			securityLog.setInfo("添加权限：" + sp + "，过期时间：" + ep + "，操作人：" + cu.getUsername());
+			String du = "{uid:" + cu.getUid() + "}";
+			securityLog.setInfo("添加权限：" + sp + "，过期时间：" + ep + "，操作人：" + du);
 			securityLogService.save(securityLog);
 		}
 		userPermissions.invalidate(uid);
@@ -275,7 +275,8 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 			securityLog.setUid(cu.getUid());
 			securityLog.setIp(NetUtil.getIpAddress(request));
 			securityLog.setTitles("移除权限", uid);
-			securityLog.setInfo("移除权限：" + sp + "，操作人：" + cu.getUsername());
+			String du = "{uid:" + cu.getUid() + "}";
+			securityLog.setInfo("移除权限：" + sp + "，操作人：" + du);
 			securityLogService.save(securityLog);
 		}
 	}

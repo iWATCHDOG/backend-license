@@ -4,6 +4,7 @@ import cn.watchdog.license.annotation.AuthCheck;
 import cn.watchdog.license.common.BaseResponse;
 import cn.watchdog.license.common.ResultUtil;
 import cn.watchdog.license.common.ReturnCode;
+import cn.watchdog.license.common.StatusCode;
 import cn.watchdog.license.constant.CommonConstant;
 import cn.watchdog.license.exception.BusinessException;
 import cn.watchdog.license.model.dto.CaptchaResult;
@@ -32,7 +33,6 @@ import cn.watchdog.license.util.captcha.TencentCaptchaUtil;
 import cn.watchdog.license.util.gson.GsonProvider;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.github.linyuzai.download.core.annotation.Download;
 import com.tencentcloudapi.common.exception.TencentCloudSDKException;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,6 +40,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -51,6 +53,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
@@ -294,9 +299,8 @@ public class UserController {
 	/**
 	 * 获取头像
 	 */
-	@Download(inline = true)
 	@GetMapping("/get/avatar/{uid}")
-	public File getAvatar(@PathVariable("uid") Long uid, HttpServletRequest request) {
+	public ResponseEntity<InputStreamResource> getAvatar(@PathVariable("uid") Long uid, HttpServletRequest request) {
 		User user = userService.getUserByCache(uid, request);
 		Path path;
 		if (user == null) {
@@ -321,7 +325,17 @@ public class UserController {
 			}
 			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "头像文件不存在", uid, request);
 		}
-		return file;
+		try {
+			InputStream is = new FileInputStream(file);
+			HttpHeaders headers = new HttpHeaders();
+			headers.add(HttpHeaders.CONTENT_TYPE, Files.probeContentType(file.toPath()));
+			headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline;filename=" + file.getName());
+			InputStreamResource inputStreamResource = new InputStreamResource(is);
+			return new ResponseEntity<>(inputStreamResource, headers, StatusCode.OK);
+		} catch (Throwable e) {
+			userService.generateDefaultAvatar(user, request);
+			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "预览系统异常", request);
+		}
 	}
 
 	/**

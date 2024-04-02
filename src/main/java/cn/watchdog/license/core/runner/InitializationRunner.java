@@ -1,5 +1,6 @@
 package cn.watchdog.license.core.runner;
 
+import cn.watchdog.license.command.ReleaseCommand;
 import cn.watchdog.license.common.ReturnCode;
 import cn.watchdog.license.exception.BusinessException;
 import cn.watchdog.license.model.entity.User;
@@ -67,5 +68,7 @@ public class InitializationRunner implements ApplicationRunner {
 		} catch (Exception e) {
 			log.error("初始化失败,数据库异常", e);
 		}
+
+		ReleaseCommand.init();
 	}
 }

@@ -3,6 +3,7 @@ package cn.watchdog.license.model.entity;
 import cn.watchdog.license.model.enums.SecurityType;
 import cn.watchdog.license.model.vo.SecurityLogVO;
 import cn.watchdog.license.util.gson.GsonProvider;
+import com.alibaba.excel.annotation.ExcelProperty;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -30,18 +31,30 @@ public class SecurityLog implements Serializable {
 	 * id
 	 */
 	@TableId(type = IdType.AUTO)
+	@ExcelProperty(value = "ID", index = 0)
 	private Long id;
 
+	@ExcelProperty(value = "UID", index = 1)
 	private Long uid;
+	@ExcelProperty(value = "头像", index = 2)
 	private String avatar;
+	@ExcelProperty(value = "标题", index = 3)
 	private String title;
+	@ExcelProperty(value = "类型", index = 4)
 	private String types;
+	@ExcelProperty(value = "IP", index = 5)
 	private String ip;
+	@ExcelProperty(value = "详细", index = 6)
 	private String info;
 
+	@ExcelProperty(value = "创建时间", index = 7)
 	private Date createTime;
+
+	@ExcelProperty(value = "更新时间", index = 8)
 	private Date updateTime;
+
 	@TableLogic
+	@ExcelProperty(value = "可用性", index = 9)
 	private Boolean available;
 
 	public List<SecurityType> toTypes() {

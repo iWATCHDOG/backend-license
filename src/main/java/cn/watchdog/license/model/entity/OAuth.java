@@ -1,5 +1,6 @@
 package cn.watchdog.license.model.entity;
 
+import com.alibaba.excel.annotation.ExcelProperty;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -21,13 +22,28 @@ public class OAuth implements Serializable {
 	 * id
 	 */
 	@TableId(type = IdType.AUTO)
+	@ExcelProperty(value = "ID", index = 0)
 	private Long id;
+
+	@ExcelProperty(value = "UID", index = 1)
 	private Long uid;
+
+	@ExcelProperty(value = "平台", index = 2)
 	private Integer platform;
+
+	@ExcelProperty(value = "openId", index = 3)
 	private String openId;
+
+	@ExcelProperty(value = "token", index = 4)
 	private String token;
+
+	@ExcelProperty(value = "创建时间", index = 5)
 	private Date createTime;
+
+	@ExcelProperty(value = "更新时间", index = 6)
 	private Date updateTime;
+
 	@TableLogic
+	@ExcelProperty(value = "可用性", index = 7)
 	private Boolean available;
 }

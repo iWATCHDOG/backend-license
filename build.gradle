@@ -57,8 +57,7 @@ dependencies {
     implementation 'me.zhyd.oauth:JustAuth:1.16.6'
     implementation 'org.lionsoul:ip2region:2.7.0'
 
-    implementation 'com.github.linyuzai:concept-download-spring-boot-starter:2.1.0'
-    implementation 'org.springframework.boot:spring-boot-starter-aop'
+    implementation 'com.alibaba:easyexcel:3.3.4'
 }
 
 processResources {

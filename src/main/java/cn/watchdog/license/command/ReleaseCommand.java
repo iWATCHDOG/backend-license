@@ -11,6 +11,15 @@ import java.util.Objects;
 
 @Slf4j
 public class ReleaseCommand {
+	public static void init() {
+		createDirectory("data", "download");
+		createDirectory("data", "download", "user");
+		createDirectory("data", "download", "log");
+		createDirectory("data", "download", "blacklist");
+		createDirectory("data", "download", "permission");
+		createDirectory("data", "download", "security-log");
+	}
+
 	public static void release() {
 		log.warn("Start checking and releasing resource files...");
 		createDirectory("config");
@@ -21,6 +30,7 @@ public class ReleaseCommand {
 		log.warn("Start checking and releasing payment profiles.");
 		createDirectory("data", "alipay");
 		createDirectory("data", "wechat");
+		init();
 		log.info("Payment folder released.");
 		log.info("Payment profiles checked and released.");
 		log.warn("Start releasing payment configuration empty file");
@@ -33,7 +43,7 @@ public class ReleaseCommand {
 		log.info("Empty payment profile created.");
 	}
 
-	private static void createDirectory(String... paths) {
+	public static void createDirectory(String... paths) {
 		Path path = Paths.get("", paths);
 		try {
 			Files.createDirectories(path);

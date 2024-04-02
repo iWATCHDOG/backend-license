@@ -7,11 +7,14 @@ import cn.watchdog.license.common.ReturnCode;
 import cn.watchdog.license.constant.CommonConstant;
 import cn.watchdog.license.exception.BusinessException;
 import cn.watchdog.license.model.dto.LogQueryRequest;
+import cn.watchdog.license.model.dto.blacklist.AddBlackListRequest;
+import cn.watchdog.license.model.dto.blacklist.BlacklistQueryRequest;
 import cn.watchdog.license.model.dto.permission.PermissionAddRequest;
 import cn.watchdog.license.model.dto.permission.PermissionQueryRequest;
 import cn.watchdog.license.model.dto.permission.PermissionRemoveRequest;
 import cn.watchdog.license.model.dto.permission.PermissionUpdateRequest;
 import cn.watchdog.license.model.dto.user.UserQueryRequest;
+import cn.watchdog.license.model.entity.Blacklist;
 import cn.watchdog.license.model.entity.Log;
 import cn.watchdog.license.model.entity.Permission;
 import cn.watchdog.license.model.entity.SecurityLog;
@@ -423,10 +426,48 @@ public class AdminController {
 		return ResultUtil.ok(count);
 	}
 
-	@PostMapping("/blacklist/{id}")
+	@PostMapping("/blacklist")
 	@AuthCheck(must = "*")
-	public ResponseEntity<BaseResponse<Boolean>> addBlacklist(@PathVariable("id") Long id, HttpServletRequest request) {
-		blacklistService.addBlacklist(id, request);
+	public ResponseEntity<BaseResponse<Boolean>> addBlacklist(AddBlackListRequest addBlackListRequest, HttpServletRequest request) {
+		blacklistService.addBlacklist(addBlackListRequest, request);
 		return ResultUtil.ok(true);
+	}
+
+	@DeleteMapping("/blacklist/{id}")
+	@AuthCheck(must = "*")
+	public ResponseEntity<BaseResponse<Boolean>> removeBlacklist(@PathVariable("id") Long id, HttpServletRequest request) {
+		blacklistService.removeBlacklist(id, request);
+		return ResultUtil.ok(true);
+	}
+
+	@GetMapping("/blacklist/list")
+	@AuthCheck(must = "*")
+	public ResponseEntity<BaseResponse<Page<Blacklist>>> getBlackListPage(BlacklistQueryRequest blacklistQueryRequest, HttpServletRequest request) {
+		if (blacklistQueryRequest == null) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数错误", request);
+		}
+		Blacklist blacklistQuery = new Blacklist();
+		BeanUtils.copyProperties(blacklistQueryRequest, blacklistQuery);
+		long current = blacklistQueryRequest.getCurrent();
+		long size = blacklistQueryRequest.getPageSize();
+		String sortField = blacklistQueryRequest.getSortField();
+		String sortOrder = blacklistQueryRequest.getSortOrder();
+		String ip = blacklistQueryRequest.getIp();
+		// 默认以id排序
+		if (sortField == null) {
+			sortField = "id";
+		}
+		// 限制爬虫
+		if (size > 100) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, request);
+		}
+
+		// 支持模糊搜索
+		blacklistQueryRequest.setIp(null);
+		QueryWrapper<Blacklist> queryWrapper = new QueryWrapper<>(blacklistQuery);
+		queryWrapper.like(StringUtils.isNotBlank(ip), "ip", ip);
+		queryWrapper.orderBy(StringUtils.isNotBlank(sortField), sortOrder.equals(CommonConstant.SORT_ORDER_ASC), sortField);
+		Page<Blacklist> blacklistPage = blacklistService.page(new Page<>(current, size), queryWrapper);
+		return ResultUtil.ok(blacklistPage);
 	}
 }

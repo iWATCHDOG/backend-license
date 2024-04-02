@@ -302,17 +302,27 @@ public class UserController {
 	@GetMapping("/get/avatar/{uid}")
 	public ResponseEntity<InputStreamResource> getAvatar(@PathVariable("uid") Long uid, HttpServletRequest request) {
 		User user = userService.getUserByCache(uid, request);
+		Path path;
 		if (user == null) {
-			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "用户不存在", uid, request);
+			path = photoService.getPhotoPathByMd5(String.valueOf(uid), request);
+		} else {
+			path = photoService.getPhotoPathByMd5(user.getAvatar(), request);
 		}
-		Path path = photoService.getPhotoPathByMd5(user.getAvatar(), request);
 		if (path == null) {
-			userService.generateDefaultAvatar(user, request);
+			if (user == null) {
+				userService.generateDefaultAvatar(uid, request);
+			} else {
+				userService.generateDefaultAvatar(user, request);
+			}
 			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "头像文件不存在", uid, request);
 		}
 		File file = new File(path.toString());
 		if (!file.exists()) {
-			userService.generateDefaultAvatar(user, request);
+			if (user == null) {
+				userService.generateDefaultAvatar(uid, request);
+			} else {
+				userService.generateDefaultAvatar(user, request);
+			}
 			throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "头像文件不存在", uid, request);
 		}
 		try {

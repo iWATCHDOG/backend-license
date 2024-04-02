@@ -622,6 +622,49 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
 	@Override
 	@Async
+	public void generateDefaultAvatar(long uid, HttpServletRequest request) {
+		String character = String.valueOf(uid);
+
+		int width = 460;
+		int height = 460;
+
+		BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		Graphics2D g = image.createGraphics();
+
+		// 白色背景
+		g.setColor(Color.WHITE);
+		g.fillRect(0, 0, width, height);
+
+		// 黑色字体
+		g.setColor(Color.BLACK);
+		g.setFont(new Font("Arial", Font.BOLD, 200));
+		FontMetrics fm = g.getFontMetrics();
+		int x = (width - fm.stringWidth(character)) / 2;
+		int y = ((height - fm.getHeight()) / 2) + fm.getAscent();
+		g.drawString(character, x, y);
+
+		g.dispose();
+
+		try {
+			String ext = "png";
+			String fileName = character + "." + ext;
+			photoService.savePhotoByMd5(character, ext, 4300, request);
+			Path path = Paths.get("photos", fileName);
+			Files.createDirectories(path.getParent());
+			ImageIO.write(image, "png", path.toFile());
+		} catch (IOException e) {
+			// 添加通知
+			NotifyResponse notifyResponse = new NotifyResponse();
+			notifyResponse.setType(NotifyType.ERROR);
+			notifyResponse.setTitle("头像生成失败");
+			notifyResponse.setContent("头像生成失败,请重试");
+			CommonConstant.addNotifyResponse(request, notifyResponse);
+			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "Failed to generate avatar", request);
+		}
+	}
+
+	@Override
+	@Async
 	public void generateDefaultAvatar(User user, HttpServletRequest request) {
 		clearAvatar(user, request);
 		String username = user.getUsername();

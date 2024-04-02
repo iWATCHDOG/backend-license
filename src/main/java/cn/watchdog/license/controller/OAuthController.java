@@ -76,8 +76,18 @@ public class OAuthController {
 	private String qqClientSecret;
 	@Value("${oauth.bilibili.enable}")
 	private boolean bilibiliEnable;
+	@Value("${oauth.wechat.enable}")
+	private boolean wechatEnable;
 	@Resource
 	private UserService userService;
+
+	public static NotifyResponse getDisabledNotifyResponse(OAuthPlatForm oAuthPlatForm, HttpServletRequest request) {
+		NotifyResponse notifyResponse = new NotifyResponse();
+		notifyResponse.setType(NotifyType.ERROR);
+		notifyResponse.setTitle(oAuthPlatForm.getName() + "登录暂时不可用");
+		notifyResponse.setContent("由于技术和测试原因，" + oAuthPlatForm.getName() + "登录暂时不可用，我们正在努力解决这个问题，给您带来的不便我们深感抱歉。");
+		return notifyResponse;
+	}
 
 	@GetMapping("/info")
 	@AuthCheck()
@@ -122,10 +132,7 @@ public class OAuthController {
 				response.sendRedirect(url);
 			} else {
 				response.sendRedirect(websiteUrl);
-				NotifyResponse notifyResponse = new NotifyResponse();
-				notifyResponse.setType(NotifyType.ERROR);
-				notifyResponse.setTitle("Github登录暂时不可用");
-				notifyResponse.setContent("由于技术和测试原因，Github登录暂时不可用，我们正在努力解决这个问题，给您带来的不便我们深感抱歉。");
+				NotifyResponse notifyResponse = getDisabledNotifyResponse(OAuthPlatForm.GITHUB, request);
 				CommonConstant.addNotifyResponse(request, notifyResponse);
 			}
 		} catch (IOException e) {
@@ -170,10 +177,7 @@ public class OAuthController {
 				response.sendRedirect(url);
 			} else {
 				response.sendRedirect(websiteUrl);
-				NotifyResponse notifyResponse = new NotifyResponse();
-				notifyResponse.setType(NotifyType.ERROR);
-				notifyResponse.setTitle("Gitee登录暂时不可用");
-				notifyResponse.setContent("由于技术和测试原因，Gitee登录暂时不可用，我们正在努力解决这个问题，给您带来的不便我们深感抱歉。");
+				NotifyResponse notifyResponse = getDisabledNotifyResponse(OAuthPlatForm.GITEE, request);
 				CommonConstant.addNotifyResponse(request, notifyResponse);
 			}
 		} catch (IOException e) {
@@ -220,10 +224,7 @@ public class OAuthController {
 				response.sendRedirect(url);
 			} else {
 				response.sendRedirect(websiteUrl);
-				NotifyResponse notifyResponse = new NotifyResponse();
-				notifyResponse.setType(NotifyType.ERROR);
-				notifyResponse.setTitle("微软登录暂时不可用");
-				notifyResponse.setContent("由于技术和测试原因，微软登录暂时不可用，我们正在努力解决这个问题，给您带来的不便我们深感抱歉。");
+				NotifyResponse notifyResponse = getDisabledNotifyResponse(OAuthPlatForm.MICROSOFT, request);
 				CommonConstant.addNotifyResponse(request, notifyResponse);
 			}
 		} catch (IOException e) {
@@ -269,10 +270,7 @@ public class OAuthController {
 				response.sendRedirect(url);
 			} else {
 				response.sendRedirect(websiteUrl);
-				NotifyResponse notifyResponse = new NotifyResponse();
-				notifyResponse.setType(NotifyType.ERROR);
-				notifyResponse.setTitle("QQ登录暂时不可用");
-				notifyResponse.setContent("由于技术和测试原因，QQ登录暂时不可用，我们正在努力解决这个问题，给您带来的不便我们深感抱歉。");
+				NotifyResponse notifyResponse = getDisabledNotifyResponse(OAuthPlatForm.QQ, request);
 				CommonConstant.addNotifyResponse(request, notifyResponse);
 			}
 		} catch (IOException e) {
@@ -306,10 +304,23 @@ public class OAuthController {
 			if (bilibiliEnable) {
 			} else {
 				response.sendRedirect(websiteUrl);
-				NotifyResponse notifyResponse = new NotifyResponse();
-				notifyResponse.setType(NotifyType.ERROR);
-				notifyResponse.setTitle("哔哩哔哩登录暂时不可用");
-				notifyResponse.setContent("由于技术和测试原因，哔哩哔哩登录暂时不可用，我们正在努力解决这个问题，给您带来的不便我们深感抱歉。");
+				NotifyResponse notifyResponse = getDisabledNotifyResponse(OAuthPlatForm.BILIBILI, request);
+				CommonConstant.addNotifyResponse(request, notifyResponse);
+			}
+		} catch (IOException e) {
+			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to redirect to QQ", request);
+		}
+		return ResultUtil.ok("Request is being processed");
+	}
+
+	@GetMapping("/wechat")
+	public ResponseEntity<BaseResponse<String>> wechat(HttpServletRequest request, HttpServletResponse response) {
+		// 直接重定向到url
+		try {
+			if (wechatEnable) {
+			} else {
+				response.sendRedirect(websiteUrl);
+				NotifyResponse notifyResponse = getDisabledNotifyResponse(OAuthPlatForm.WECHAT, request);
 				CommonConstant.addNotifyResponse(request, notifyResponse);
 			}
 		} catch (IOException e) {

@@ -44,6 +44,10 @@ public interface UserService extends IService<User> {
 	@Async
 	void generateDefaultAvatar(User user, HttpServletRequest request);
 
+	@Async
+	void generateDefaultAvatar(long uid, HttpServletRequest request);
+
+
 	void unbind(OAuthPlatForm oAuthPlatForm, HttpServletRequest request);
 
 	boolean checkStatus(User user, HttpServletRequest request);

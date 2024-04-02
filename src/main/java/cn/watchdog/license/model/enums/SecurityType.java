@@ -60,6 +60,14 @@ public enum SecurityType {
 	 * 修改权限
 	 */
 	UPDATE_PERMISSION(602),
+	/**
+	 * 添加黑名单
+	 */
+	ADD_BLACKLIST(700),
+	/**
+	 * 移除黑名单
+	 */
+	REMOVE_BLACKLIST(701),
 	;
 
 	final int code;

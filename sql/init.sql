@@ -89,6 +89,8 @@ CREATE TABLE IF NOT EXISTS `blacklist`
 (
     id         BIGINT AUTO_INCREMENT              NOT NULL COMMENT 'id' PRIMARY KEY,
     ip         VARCHAR(32)                        NOT NULL COMMENT 'ip',
+    log        BIGINT                             NOT NULL COMMENT '日志id',
+    reason     VARCHAR(256)                       NULL COMMENT '原因',
     createTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
     updateTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     available  BOOL     DEFAULT TRUE              NOT NULL COMMENT '是否可用'

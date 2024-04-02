@@ -18,7 +18,6 @@ public class PhotoServiceImpl extends ServiceImpl<PhotoMapper, Photo> implements
 		// 查询md5是否已经记录
 		Photo photo = this.lambdaQuery().eq(Photo::getMd5, md5).one();
 		if (photo != null) {
-			log.info("md5:{}已经存在", md5);
 			return;
 		}
 		// 保存

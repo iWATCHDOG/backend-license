@@ -1,19 +1,19 @@
-package cn.watchdog.license.model.entity;
+package cn.watchdog.license.model.dto.blacklist;
 
+import cn.watchdog.license.common.PageRequest;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
-import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.Date;
 
-@TableName(value = "blacklist")
+@EqualsAndHashCode(callSuper = true)
 @Data
-public class Blacklist implements Serializable {
+public class BlacklistQueryRequest extends PageRequest implements Serializable {
 	@Serial
 	@TableField(exist = false)
 	private static final long serialVersionUID = 1L;
@@ -29,6 +29,4 @@ public class Blacklist implements Serializable {
 
 	private Date createTime;
 	private Date updateTime;
-	@TableLogic
-	private Boolean available;
 }

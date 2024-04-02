@@ -59,7 +59,6 @@ dependencies {
 
     implementation 'com.github.linyuzai:concept-download-spring-boot-starter:2.1.0'
     implementation 'org.springframework.boot:spring-boot-starter-aop'
-
 }
 
 processResources {

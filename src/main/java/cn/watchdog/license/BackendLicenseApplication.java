@@ -26,6 +26,7 @@ public class BackendLicenseApplication {
 			if (arg.startsWith("release")) {
 				release();
 				run = false;
+				break;
 			}
 		}
 		if (run) {

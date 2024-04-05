@@ -2,7 +2,6 @@ package cn.watchdog.license.controller;
 
 import cn.watchdog.license.annotation.AuthCheck;
 import cn.watchdog.license.common.BaseResponse;
-import cn.watchdog.license.common.DataCenter;
 import cn.watchdog.license.common.ResultUtil;
 import cn.watchdog.license.common.ReturnCode;
 import cn.watchdog.license.constant.CommonConstant;
@@ -29,9 +28,11 @@ import cn.watchdog.license.service.LogService;
 import cn.watchdog.license.service.PermissionService;
 import cn.watchdog.license.service.SecurityLogService;
 import cn.watchdog.license.service.UserService;
+import cn.watchdog.license.util.ExcelUtil;
 import cn.watchdog.license.util.NetUtil;
 import cn.watchdog.license.util.PasswordUtil;
 import com.alibaba.excel.EasyExcel;
+import com.alibaba.excel.ExcelWriter;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.plugins.pagination.PageDTO;
@@ -50,9 +51,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
@@ -418,21 +416,21 @@ public class AdminController {
 	@GetMapping("/count/log")
 	@AuthCheck(must = "*")
 	public ResponseEntity<BaseResponse<Long>> countLog(HttpServletRequest request) {
-		long count = logService.count();
+		long count = logService.lambdaQuery().count();
 		return ResultUtil.ok(count);
 	}
 
 	@GetMapping("/count/security")
 	@AuthCheck(must = "*")
 	public ResponseEntity<BaseResponse<Long>> countSecurityLog(HttpServletRequest request) {
-		long count = securityLogService.count();
+		long count = securityLogService.lambdaQuery().count();
 		return ResultUtil.ok(count);
 	}
 
 	@GetMapping("/count/blacklist")
 	@AuthCheck(must = "*")
 	public ResponseEntity<BaseResponse<Long>> countBlacklist(HttpServletRequest request) {
-		long count = blacklistService.count();
+		long count = blacklistService.lambdaQuery().count();
 		return ResultUtil.ok(count);
 	}
 
@@ -481,222 +479,61 @@ public class AdminController {
 		return ResultUtil.ok(blacklistPage);
 	}
 
-	@RequestMapping("/download/user")
-	@AuthCheck(must = "*")
-	public ResponseEntity<BaseResponse<String>> downloadUser(HttpServletRequest request, HttpServletResponse response) {
-		// 当前时间格式化为 年月日时分秒
+	@RequestMapping("/download/{type}")
+	public ResponseEntity<BaseResponse<String>> download(@PathVariable("type") String type, HttpServletRequest request, HttpServletResponse response) {
 		String key = getKey();
-
-		// 创建文件夹
-		String fileName = "user_%s.xlsx".formatted(key);
-		String path = "./data/download/user/" + fileName;
-		EasyExcel.write(path, User.class)
-				.sheet("user")
-				.doWrite(() -> {
-					List<User> userList = DataCenter.userCache.getIfPresent(key);
-					if (userList == null) {
-						userList = userService.lambdaQuery().orderByDesc(User::getUid).last("limit 5000").list();
-						DataCenter.userCache.put(key, userList);
-					}
-					return userList;
-				});
-		File file = new File(path);
-		if (!file.exists()) {
-			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "文件不存在", request);
+		OutputStream outputStream = null;
+		if (StringUtils.isAnyBlank(type)) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空", request);
 		}
-		response.reset();
-		response.setContentType("application/octet-stream");
-		response.setCharacterEncoding("utf-8");
-		response.setContentLength((int) file.length());
-		response.setHeader("Content-Disposition", "attachment;filename=" + fileName);
+		type = type.toLowerCase();
+		// 判断是否是合法的type,是否为user,permission,log,security,blacklist
+		if (!List.of("user", "permission", "log", "security", "blacklist").contains(type)) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数错误", request);
+		}
+		String fileName = "%s_%s.xlsx".formatted(type, key);
 
-		try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));) {
-			byte[] buff = new byte[1024];
-			OutputStream os = response.getOutputStream();
-			int i = 0;
-			while ((i = bis.read(buff)) != -1) {
-				os.write(buff, 0, i);
-				os.flush();
+		try {
+			outputStream = response.getOutputStream();
+			//必须放到循环外，否则会刷新流
+			ExcelWriter excelWriter = EasyExcel.write(outputStream).build();
+			switch (type) {
+				case "user":
+					ExcelUtil.write(userService, User.class, excelWriter, "user");
+					break;
+				case "permission":
+					ExcelUtil.write(permissionService, Permission.class, excelWriter, "permission");
+					break;
+				case "log":
+					ExcelUtil.write(logService, Log.class, excelWriter, "log");
+					break;
+				case "security":
+					ExcelUtil.write(securityLogService, SecurityLog.class, excelWriter, "security");
+					break;
+				case "blacklist":
+					ExcelUtil.write(blacklistService, Blacklist.class, excelWriter, "blacklist");
+					break;
+				default:
+					throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数错误", request);
 			}
+			// 下载EXCEL
+			response.setContentType("application/octet-stream");
+			response.setCharacterEncoding("utf-8");
+			// 这里URLEncoder.encode可以防止浏览器端导出excel文件名中文乱码 当然和easyexcel没有关系
+			response.setHeader("Content-disposition", "attachment;filename*=utf-8''" + fileName + ".xlsx");
+			excelWriter.finish();
+			outputStream.flush();
 		} catch (IOException e) {
 			log.error("下载文件失败", e);
 			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "下载文件失败", request);
-		}
-		return ResultUtil.ok(fileName);
-	}
-
-	@RequestMapping("/download/log")
-	@AuthCheck(must = "*")
-	public ResponseEntity<BaseResponse<String>> downloadLog(HttpServletRequest request, HttpServletResponse response) {
-		// 当前时间格式化为 年月日时分秒
-		String key = getKey();
-
-		// 创建文件夹
-		String fileName = "log_%s.xlsx".formatted(key);
-		String path = "./data/download/log/" + fileName;
-		EasyExcel.write(path, Log.class)
-				.sheet("log")
-				.doWrite(() -> {
-					List<Log> logList = DataCenter.logCache.getIfPresent(key);
-					if (logList == null) {
-						logList = logService.lambdaQuery().orderByDesc(Log::getId).last("limit 1000").list();
-						DataCenter.logCache.put(key, logList);
-					}
-					return logList;
-				});
-		File file = new File(path);
-		if (!file.exists()) {
-			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "文件不存在", request);
-		}
-		response.reset();
-		response.setContentType("application/octet-stream");
-		response.setCharacterEncoding("utf-8");
-		response.setContentLength((int) file.length());
-		response.setHeader("Content-Disposition", "attachment;filename=" + fileName);
-
-		try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));) {
-			byte[] buff = new byte[1024];
-			OutputStream os = response.getOutputStream();
-			int i = 0;
-			while ((i = bis.read(buff)) != -1) {
-				os.write(buff, 0, i);
-				os.flush();
+		} finally {
+			if (outputStream != null) {
+				try {
+					outputStream.close();
+				} catch (IOException e) {
+					throw new BusinessException(ReturnCode.SYSTEM_ERROR, "释放流异常", request);
+				}
 			}
-		} catch (IOException e) {
-			log.error("下载文件失败", e);
-			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "下载文件失败", request);
-		}
-		return ResultUtil.ok(fileName);
-	}
-
-	@RequestMapping("/download/security-log")
-	@AuthCheck(must = "*")
-	public ResponseEntity<BaseResponse<String>> downloadSecurityLog(HttpServletRequest request, HttpServletResponse response) {
-		// 当前时间格式化为 年月日时分秒
-		String key = getKey();
-
-		// 创建文件夹
-		String fileName = "security_log_%s.xlsx".formatted(key);
-		String path = "./data/download/security-log/" + fileName;
-		EasyExcel.write(path, SecurityLog.class)
-				.sheet("security_log")
-				.doWrite(() -> {
-					List<SecurityLog> securityLogList = DataCenter.securityLogCache.getIfPresent(key);
-					if (securityLogList == null) {
-						securityLogList = securityLogService.lambdaQuery().orderByDesc(SecurityLog::getId).last("limit 1000").list();
-						DataCenter.securityLogCache.put(key, securityLogList);
-					}
-					return securityLogList;
-				});
-		File file = new File(path);
-		if (!file.exists()) {
-			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "文件不存在", request);
-		}
-		response.reset();
-		response.setContentType("application/octet-stream");
-		response.setCharacterEncoding("utf-8");
-		response.setContentLength((int) file.length());
-		response.setHeader("Content-Disposition", "attachment;filename=" + fileName);
-
-		try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));) {
-			byte[] buff = new byte[1024];
-			OutputStream os = response.getOutputStream();
-			int i = 0;
-			while ((i = bis.read(buff)) != -1) {
-				os.write(buff, 0, i);
-				os.flush();
-			}
-		} catch (IOException e) {
-			log.error("下载文件失败", e);
-			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "下载文件失败", request);
-		}
-		return ResultUtil.ok(fileName);
-	}
-
-	@RequestMapping("/download/blacklist")
-	@AuthCheck(must = "*")
-	public ResponseEntity<BaseResponse<String>> downloadBlacklist(HttpServletRequest request, HttpServletResponse response) {
-		// 当前时间格式化为 年月日时分秒
-		String key = getKey();
-
-		// 创建文件夹
-		String fileName = "blacklist_%s.xlsx".formatted(key);
-		String path = "./data/download/blacklist/" + fileName;
-		EasyExcel.write(path, Blacklist.class)
-				.sheet("blacklist")
-				.doWrite(() -> {
-					List<Blacklist> blacklistList = DataCenter.blacklistCache.getIfPresent(key);
-					if (blacklistList == null) {
-						blacklistList = blacklistService.lambdaQuery().orderByDesc(Blacklist::getId).last("limit 1000").list();
-						DataCenter.blacklistCache.put(key, blacklistList);
-					}
-					return blacklistList;
-				});
-		File file = new File(path);
-		if (!file.exists()) {
-			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "文件不存在", request);
-		}
-		response.reset();
-		response.setContentType("application/octet-stream");
-		response.setCharacterEncoding("utf-8");
-		response.setContentLength((int) file.length());
-		response.setHeader("Content-Disposition", "attachment;filename=" + fileName);
-
-		try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));) {
-			byte[] buff = new byte[1024];
-			OutputStream os = response.getOutputStream();
-			int i = 0;
-			while ((i = bis.read(buff)) != -1) {
-				os.write(buff, 0, i);
-				os.flush();
-			}
-		} catch (IOException e) {
-			log.error("下载文件失败", e);
-			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "下载文件失败", request);
-		}
-		return ResultUtil.ok(fileName);
-	}
-
-	@RequestMapping("/download/permission")
-	@AuthCheck(must = "*")
-	public ResponseEntity<BaseResponse<String>> downloadPermission(HttpServletRequest request, HttpServletResponse response) {
-		// 当前时间格式化为 年月日时分秒
-		String key = getKey();
-
-		// 创建文件夹
-		String fileName = "permission_%s.xlsx".formatted(key);
-		String path = "./data/download/permission/" + fileName;
-		EasyExcel.write(path, Permission.class)
-				.sheet("permission")
-				.doWrite(() -> {
-					List<Permission> permissionList = DataCenter.permissionCache.getIfPresent(key);
-					if (permissionList == null) {
-						permissionList = permissionService.lambdaQuery().orderByDesc(Permission::getId).last("limit 2000").list();
-						DataCenter.permissionCache.put(key, permissionList);
-					}
-					return permissionList;
-				});
-		File file = new File(path);
-		if (!file.exists()) {
-			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "文件不存在", request);
-		}
-		response.reset();
-		response.setContentType("application/octet-stream");
-		response.setCharacterEncoding("utf-8");
-		response.setContentLength((int) file.length());
-		response.setHeader("Content-Disposition", "attachment;filename=" + fileName);
-
-		try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));) {
-			byte[] buff = new byte[1024];
-			OutputStream os = response.getOutputStream();
-			int i = 0;
-			while ((i = bis.read(buff)) != -1) {
-				os.write(buff, 0, i);
-				os.flush();
-			}
-		} catch (IOException e) {
-			log.error("下载文件失败", e);
-			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "下载文件失败", request);
 		}
 		return ResultUtil.ok(fileName);
 	}

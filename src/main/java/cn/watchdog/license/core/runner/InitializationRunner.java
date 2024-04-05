@@ -1,6 +1,5 @@
 package cn.watchdog.license.core.runner;
 
-import cn.watchdog.license.command.ReleaseCommand;
 import cn.watchdog.license.common.ReturnCode;
 import cn.watchdog.license.exception.BusinessException;
 import cn.watchdog.license.model.entity.User;
@@ -11,12 +10,14 @@ import cn.watchdog.license.util.StringUtil;
 import cn.watchdog.license.util.crypto.AESUtil;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.SpreadsheetVersion;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -27,6 +28,23 @@ public class InitializationRunner implements ApplicationRunner {
 	private UserService userService;
 	@Resource
 	private PermissionService permissionService;
+
+	public static void resetCellMaxTextLength() {
+		SpreadsheetVersion excel2007 = SpreadsheetVersion.EXCEL2007;
+		if (Integer.MAX_VALUE != excel2007.getMaxTextLength()) {
+			Field field;
+			try {
+				// SpreadsheetVersion.EXCEL2007的_maxTextLength变量
+				field = excel2007.getClass().getDeclaredField("_maxTextLength");
+				// 关闭反射机制的安全检查，可以提高性能
+				field.setAccessible(true);
+				// 重新设置这个变量属性值
+				field.set(excel2007, Integer.MAX_VALUE);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
 
 	@Override
 	public void run(ApplicationArguments args) {
@@ -68,7 +86,7 @@ public class InitializationRunner implements ApplicationRunner {
 		} catch (Exception e) {
 			log.error("初始化失败,数据库异常", e);
 		}
-
-		ReleaseCommand.init();
+		resetCellMaxTextLength();
 	}
+
 }

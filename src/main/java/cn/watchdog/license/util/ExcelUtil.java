@@ -13,7 +13,6 @@ import java.util.List;
 
 @Slf4j
 public class ExcelUtil<T> {
-
 	public static <T> void write(IService<T> service, Class<?> clas, ExcelWriter excelWriter, String sheetName) {
 		//记录总数:实际中需要根据查询条件进行统计即可:一共多少条
 		long totalCount = service.lambdaQuery().count();

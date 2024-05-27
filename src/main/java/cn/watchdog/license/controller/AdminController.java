@@ -57,8 +57,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static cn.watchdog.license.common.DataCenter.*;
-
 @RestController
 @RequestMapping("/admin")
 @Slf4j
@@ -480,8 +478,8 @@ public class AdminController {
 	}
 
 	@RequestMapping("/download/{type}")
+	@AuthCheck(must = "*")
 	public ResponseEntity<BaseResponse<String>> download(@PathVariable("type") String type, HttpServletRequest request, HttpServletResponse response) {
-		String key = getKey();
 		OutputStream outputStream = null;
 		if (StringUtils.isAnyBlank(type)) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空", request);
@@ -491,7 +489,7 @@ public class AdminController {
 		if (!List.of("user", "permission", "log", "security", "blacklist").contains(type)) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数错误", request);
 		}
-		String fileName = "%s_%s.xlsx".formatted(type, key);
+		String fileName = "%s_%s.xlsx".formatted(type, System.currentTimeMillis());
 
 		try {
 			outputStream = response.getOutputStream();

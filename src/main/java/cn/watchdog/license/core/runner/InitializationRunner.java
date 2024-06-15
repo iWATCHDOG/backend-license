@@ -3,6 +3,7 @@ package cn.watchdog.license.core.runner;
 import cn.watchdog.license.common.ReturnCode;
 import cn.watchdog.license.exception.BusinessException;
 import cn.watchdog.license.model.entity.User;
+import cn.watchdog.license.service.ChartService;
 import cn.watchdog.license.service.PermissionService;
 import cn.watchdog.license.service.UserService;
 import cn.watchdog.license.util.PasswordUtil;
@@ -27,6 +28,8 @@ public class InitializationRunner implements ApplicationRunner {
 	@Resource
 	private UserService userService;
 	@Resource
+	private ChartService chartService;
+	@Resource
 	private PermissionService permissionService;
 
 	public static void resetCellMaxTextLength() {
@@ -44,6 +47,11 @@ public class InitializationRunner implements ApplicationRunner {
 				e.printStackTrace();
 			}
 		}
+	}
+
+	public void initChartData() {
+		int days = 7;
+		chartService.getCreateUserChart(days);
 	}
 
 	@Override
@@ -70,9 +78,9 @@ public class InitializationRunner implements ApplicationRunner {
 					throw new BusinessException(ReturnCode.SYSTEM_ERROR, "添加失败，数据库错误", null);
 				}
 				log.info("管理员账户创建成功！");
-				log.info("用户名：" + userName);
-				log.info("密码：" + userPassword);
-				log.info("邮箱：" + userEmail);
+				log.info("用户名：{}", userName);
+				log.info("密码：{}", userPassword);
+				log.info("邮箱：{}", userEmail);
 				log.warn("请网站管理员在登录后及时修改账户信息（用户名、密码、邮箱等）。");
 				log.warn("此信息只显示一次，请妥善保管！");
 				userService.generateDefaultAvatar(user, null);
@@ -87,6 +95,7 @@ public class InitializationRunner implements ApplicationRunner {
 			log.error("初始化失败,数据库异常", e);
 		}
 		resetCellMaxTextLength();
+		initChartData();
 	}
 
 }

@@ -106,3 +106,24 @@ CREATE TABLE IF NOT EXISTS `photo`
     updateTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     available  BOOL     DEFAULT TRUE              NOT NULL COMMENT '是否可用'
 );
+
+CREATE TABLE IF NOT EXISTS `one_time_password`
+(
+    id         BIGINT AUTO_INCREMENT              NOT NULL COMMENT 'id' PRIMARY KEY,
+    uid        BIGINT                             NOT NULL COMMENT 'uid',
+    secret     VARCHAR(512)                       NOT NULL COMMENT 'secret',
+    createTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
+    updateTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    available  BOOL     DEFAULT TRUE              NOT NULL COMMENT '是否可用'
+);
+
+CREATE TABLE IF NOT EXISTS `invite_code`
+(
+    id         BIGINT AUTO_INCREMENT              NOT NULL COMMENT 'id' PRIMARY KEY,
+    uid        BIGINT                             NOT NULL COMMENT 'uid',
+    code       VARCHAR(16)                        NOT NULL COMMENT '邀请码',
+    expiry     BIGINT   DEFAULT 0                 NOT NULL COMMENT '过期时间',
+    createTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
+    updateTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    available  BOOL     DEFAULT TRUE              NOT NULL COMMENT '是否可用'
+);

@@ -88,6 +88,12 @@ public class UserController {
 	private String captchaAppSecretKey;
 	@Value("${captcha.enable}")
 	private boolean captchaEnable;
+	@Value("${account.register.enable}")
+	private boolean registerEnable;
+	@Value("${account.forget.enable}")
+	private boolean forgetEnable;
+	@Value("${account.invite.enable}")
+	private boolean inviteEnable;
 
 	public void checkCaptcha(HttpServletRequest request) {
 		if (!captchaEnable) {
@@ -115,6 +121,9 @@ public class UserController {
 	@PostMapping("/create")
 	public ResponseEntity<BaseResponse<UserVO>> userCreate(UserCreateRequest userCreateRequest, HttpServletRequest request) {
 		checkCaptcha(request);
+		if (!registerEnable) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "注册功能已关闭", request);
+		}
 		User user = userService.userCreate(userCreateRequest, request);
 		UserVO userVO = user.toUserVO();
 		// 获取Token
@@ -127,8 +136,14 @@ public class UserController {
 	}
 
 	@PostMapping("create/email")
+	/*
+	  验证码请求
+	 */
 	public ResponseEntity<BaseResponse<Boolean>> userCreateEmail(String email, HttpServletRequest request) {
 		checkCaptcha(request);
+		if (!registerEnable) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "注册功能已关闭", request);
+		}
 		boolean check = userService.checkEmail(email, request);
 		if (!check) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "邮箱已被注册", email, request);
@@ -142,6 +157,9 @@ public class UserController {
 	@PostMapping("forget/email")
 	public ResponseEntity<BaseResponse<String>> forgetPasswordEmail(String email, HttpServletRequest request) {
 		checkCaptcha(request);
+		if (!forgetEnable) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "忘记密码功能已关闭", request);
+		}
 		User user = userService.getByEmail(email, request);
 		if (user != null) {
 			String token = UUID.randomUUID().toString();
@@ -154,6 +172,9 @@ public class UserController {
 	@PostMapping("forget/password")
 	public ResponseEntity<BaseResponse<Boolean>> forgetPassword(String password, HttpServletRequest request) {
 		checkCaptcha(request);
+		if (!forgetEnable) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "忘记密码功能已关闭", request);
+		}
 		String token = request.getHeader(FORGET_TOKEN);
 		if (StringUtils.isAllBlank(token, password)) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数错误", request);

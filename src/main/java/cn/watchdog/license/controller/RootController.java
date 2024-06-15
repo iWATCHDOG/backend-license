@@ -6,9 +6,12 @@ import cn.watchdog.license.constant.CommonConstant;
 import cn.watchdog.license.model.dto.NotifyRequest;
 import cn.watchdog.license.model.dto.NotifyResponse;
 import cn.watchdog.license.model.enums.NotifyType;
+import cn.watchdog.license.service.ChartService;
+import cn.watchdog.license.util.chart.ChartData;
 import cn.watchdog.license.util.IpRegionUtil;
 import cn.watchdog.license.util.NetUtil;
 import cn.watchdog.license.util.VersionUtil;
+import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +27,8 @@ import java.util.List;
 @RequestMapping("/")
 @Slf4j
 public class RootController {
+	@Resource
+	private ChartService chartService;
 	public static long count = 1;
 
 	@GetMapping("/version")
@@ -61,5 +66,10 @@ public class RootController {
 	@RequestMapping("/ip")
 	public ResponseEntity<BaseResponse<IpRegionUtil.Region>> getIpRegion(HttpServletRequest request) {
 		return ResultUtil.ok(IpRegionUtil.getInstance().search(NetUtil.getIpAddress(request)));
+	}
+
+	@RequestMapping("/chart")
+	public ResponseEntity<BaseResponse<List<ChartData>>> chart(HttpServletRequest request) {
+		return ResultUtil.ok(chartService.getCreateUserChart(30));
 	}
 }

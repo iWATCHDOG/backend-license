@@ -561,7 +561,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			notifyResponse.setContent("头像下载失败，已使用默认头像");
 			CommonConstant.addNotifyResponse(request, notifyResponse);
 			generateDefaultAvatar(user, request);
-			throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to download avatar", avatarUrl, request);
+			// throw new BusinessException(ReturnCode.OPERATION_ERROR, "Failed to download avatar", avatarUrl, request);
 		}
 	}
 

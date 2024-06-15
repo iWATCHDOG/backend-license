@@ -7,10 +7,11 @@ import cn.watchdog.license.model.dto.NotifyRequest;
 import cn.watchdog.license.model.dto.NotifyResponse;
 import cn.watchdog.license.model.enums.NotifyType;
 import cn.watchdog.license.service.ChartService;
-import cn.watchdog.license.util.chart.ChartData;
 import cn.watchdog.license.util.IpRegionUtil;
 import cn.watchdog.license.util.NetUtil;
 import cn.watchdog.license.util.VersionUtil;
+import cn.watchdog.license.util.chart.ChartData;
+import cn.watchdog.license.util.chart.ChartType;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -27,9 +28,9 @@ import java.util.List;
 @RequestMapping("/")
 @Slf4j
 public class RootController {
+	public static long count = 1;
 	@Resource
 	private ChartService chartService;
-	public static long count = 1;
 
 	@GetMapping("/version")
 	public ResponseEntity<BaseResponse<VersionUtil.Version>> getVersion(HttpServletRequest request) {
@@ -70,6 +71,6 @@ public class RootController {
 
 	@RequestMapping("/chart")
 	public ResponseEntity<BaseResponse<List<ChartData>>> chart(HttpServletRequest request) {
-		return ResultUtil.ok(chartService.getCreateUserChart(30));
+		return ResultUtil.ok(chartService.getChartDataForType(ChartType.USER_CREATE, 30));
 	}
 }

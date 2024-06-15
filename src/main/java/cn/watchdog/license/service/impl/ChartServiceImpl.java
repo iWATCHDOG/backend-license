@@ -1,64 +1,87 @@
 package cn.watchdog.license.service.impl;
 
-import cn.watchdog.license.model.entity.User;
+import cn.watchdog.license.factory.ChartDataSourceServiceFactory;
+import cn.watchdog.license.service.ChartDataSourceService;
 import cn.watchdog.license.service.ChartService;
-import cn.watchdog.license.service.UserService;
 import cn.watchdog.license.util.CaffeineFactory;
 import cn.watchdog.license.util.chart.ChartData;
-import cn.watchdog.license.util.chart.ChatType;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import cn.watchdog.license.util.chart.ChartType;
 import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
 public class ChartServiceImpl implements ChartService {
-	// 缓存用户数据（只缓存今天的数据）
-	private static final Cache<ChatType, Long> chartCache = CaffeineFactory.newBuilder().expireAfterWrite(30, TimeUnit.SECONDS).build();
-	private static final HashMap<String, Long> userCache = new HashMap<>();
+	private static final EnumMap<ChartType, Cache<String, Long>> shortTermCacheMap = new EnumMap<>(ChartType.class);
+	private static final EnumMap<ChartType, Cache<String, Long>> longTermCacheMap = new EnumMap<>(ChartType.class);
+
+	static {
+		// 初始化短期缓存（今天的数据，30秒过期）
+		for (ChartType chatType : ChartType.values()) {
+			shortTermCacheMap.put(chatType, CaffeineFactory.newBuilder()
+					.expireAfterWrite(30, TimeUnit.SECONDS).build());
+		}
+
+		// 初始化长期缓存（非今天的数据，永不过期）
+		for (ChartType chatType : ChartType.values()) {
+			longTermCacheMap.put(chatType, Caffeine.newBuilder()
+					.build());
+		}
+	}
+
 	@Resource
-	private UserService userService;
+	private ChartDataSourceServiceFactory dataSourceServiceFactory;
 
 	@Override
-	public List<ChartData> getCreateUserChart(int days) {
+	public List<ChartData> getChartDataForType(ChartType chatType, int days) {
 		List<ChartData> chartDataList = new ArrayList<>();
+		ZoneId zoneId = ZoneId.systemDefault();
+		LocalDateTime now = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
+
 		for (int i = 0; i < days; i++) {
-			Date date = new Date(System.currentTimeMillis() - (long) i * 24 * 60 * 60 * 1000);
+			LocalDateTime targetDateTime = now.minusDays(i);
+			Date date = toDateFromLocalDateTime(targetDateTime, zoneId);
 			String key = String.format("%tF", date);
-			long count = 0;
-			// 如果是今天的数据，从缓存中获取
-			if (i == 0) {
-				Long todayCount = chartCache.getIfPresent(ChatType.USER_CREATE);
-				if (todayCount != null) {
-					count = todayCount;
-				} else {
-					QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-					queryWrapper.lambda().ge(User::getCreateTime, key + " 00:00:00").lt(User::getCreateTime, key + " 23:59:59");
-					count = userService.count(queryWrapper);
-					chartCache.put(ChatType.USER_CREATE, count);
-				}
-			} else {
-				// 不是今天的数据，直接从缓存中获取
-				Long oc = userCache.get(key);
-				if (oc == null) {
-					QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-					queryWrapper.lambda().ge(User::getCreateTime, new Date(date.getTime())).lt(User::getCreateTime, new Date(date.getTime() + 24 * 60 * 60 * 1000));
-					oc = userService.count(queryWrapper);
-					userCache.put(key, oc);
-				} else {
-					count = oc;
-				}
-			}
+			long count = retrieveCountForDate(chatType, key, date, i == 0);
 			chartDataList.add(new ChartData(key, count));
 		}
+
 		return chartDataList;
+	}
+
+	private Date toDateFromLocalDateTime(LocalDateTime dateTime, ZoneId zoneId) {
+		return Date.from(dateTime.atZone(zoneId).toInstant());
+	}
+
+	private long retrieveCountForDate(ChartType chartType, String key, Date date, boolean isToday) {
+		Cache<String, Long> cache = isToday ? shortTermCacheMap.get(chartType) : longTermCacheMap.get(chartType);
+		Long count = cache.getIfPresent(key);
+
+		if (count == null) {
+			count = fetchCountFromService(chartType, date);
+			cache.put(key, count);
+		}
+
+		return count;
+	}
+
+	private long fetchCountFromService(ChartType chartType, Date date) {
+		ChartDataSourceService service = dataSourceServiceFactory.getService(chartType);
+		if (service == null) {
+			log.warn("No service found for ChartType: {}", chartType);
+			return 0;
+		}
+		return service.getCountForDate(date);
 	}
 }

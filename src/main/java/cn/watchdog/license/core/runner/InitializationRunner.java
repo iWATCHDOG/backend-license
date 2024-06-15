@@ -8,6 +8,7 @@ import cn.watchdog.license.service.PermissionService;
 import cn.watchdog.license.service.UserService;
 import cn.watchdog.license.util.PasswordUtil;
 import cn.watchdog.license.util.StringUtil;
+import cn.watchdog.license.util.chart.ChartType;
 import cn.watchdog.license.util.crypto.AESUtil;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -51,7 +52,7 @@ public class InitializationRunner implements ApplicationRunner {
 
 	public void initChartData() {
 		int days = 7;
-		chartService.getCreateUserChart(days);
+		chartService.getChartDataForType(ChartType.USER_CREATE, days);
 	}
 
 	@Override

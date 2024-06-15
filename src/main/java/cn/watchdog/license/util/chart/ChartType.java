@@ -1,5 +1,7 @@
 package cn.watchdog.license.util.chart;
 
-public enum ChatType {
+public enum ChartType {
 	USER_CREATE,
+	PHOTO,
+	SECURITY_LOG
 }

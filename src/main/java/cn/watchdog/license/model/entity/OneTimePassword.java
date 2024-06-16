@@ -12,7 +12,7 @@ import java.io.Serial;
 import java.io.Serializable;
 import java.util.Date;
 
-@TableName(value = "one_time_password")
+@TableName(value = "2fa")
 @Data
 public class OneTimePassword implements Serializable {
 	@Serial
@@ -28,6 +28,9 @@ public class OneTimePassword implements Serializable {
 	private Long uid;
 	@ExcelProperty(value = "2FA密钥", index = 2)
 	private String secret;
+
+	@ExcelProperty(value = "强制开启", index = 3)
+	private Boolean forceEnable;
 
 	@ExcelProperty(value = "创建时间", index = 4)
 	private Date createTime;

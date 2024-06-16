@@ -14,7 +14,7 @@ import java.util.Date;
 
 @TableName(value = "invite_code")
 @Data
-public class InviteCode implements Serializable {
+public class InviteRecord implements Serializable {
 	@Serial
 	@TableField(exist = false)
 	private static final long serialVersionUID = 1L;
@@ -28,12 +28,6 @@ public class InviteCode implements Serializable {
 	private Long uid;
 	@ExcelProperty(value = "邀请码", index = 2)
 	private String code;
-	@ExcelProperty(value = "过期时间", index = 3)
-	private Long expiry;
-	@ExcelProperty(value = "使用时间", index = 4)
-	private String defaultGroups;
-	@ExcelProperty(value = "可用次数", index = 5)
-	private Integer times;
 
 	@ExcelProperty(value = "创建时间", index = 6)
 	private Date createTime;

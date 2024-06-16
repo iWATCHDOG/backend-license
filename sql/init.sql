@@ -107,22 +107,35 @@ CREATE TABLE IF NOT EXISTS `photo`
     available  BOOL     DEFAULT TRUE              NOT NULL COMMENT '是否可用'
 );
 
-CREATE TABLE IF NOT EXISTS `one_time_password`
+CREATE TABLE IF NOT EXISTS `2fa`
 (
-    id         BIGINT AUTO_INCREMENT              NOT NULL COMMENT 'id' PRIMARY KEY,
-    uid        BIGINT                             NOT NULL COMMENT 'uid',
-    secret     VARCHAR(512)                       NOT NULL COMMENT 'secret',
-    createTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
-    updateTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    available  BOOL     DEFAULT TRUE              NOT NULL COMMENT '是否可用'
+    id          BIGINT AUTO_INCREMENT              NOT NULL COMMENT 'id' PRIMARY KEY,
+    uid         BIGINT                             NOT NULL COMMENT 'uid',
+    secret      VARCHAR(512)                       NOT NULL COMMENT 'secret',
+    forceEnable BOOL     DEFAULT FALSE             NOT NULL COMMENT '是否强制开启',
+    createTime  DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
+    updateTime  DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    available   BOOL     DEFAULT TRUE              NOT NULL COMMENT '是否可用'
 );
 
 CREATE TABLE IF NOT EXISTS `invite_code`
 (
+    id            BIGINT AUTO_INCREMENT              NOT NULL COMMENT 'id' PRIMARY KEY,
+    uid           BIGINT                             NOT NULL COMMENT '创建人',
+    code          VARCHAR(16)                        NOT NULL COMMENT '邀请码',
+    expiry        BIGINT   DEFAULT 0                 NOT NULL COMMENT '过期时间',
+    defaultGroups TEXT                               NULL COMMENT '默认分组',
+    times         INTEGER  DEFAULT 0                 NOT NULL COMMENT '次数',
+    createTime    DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
+    updateTime    DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    available     BOOL     DEFAULT TRUE              NOT NULL COMMENT '是否可用'
+);
+
+CREATE TABLE IF NOT EXISTS `invite_record`
+(
     id         BIGINT AUTO_INCREMENT              NOT NULL COMMENT 'id' PRIMARY KEY,
-    uid        BIGINT                             NOT NULL COMMENT 'uid',
+    uid        BIGINT                             NOT NULL COMMENT '使用者uid',
     code       VARCHAR(16)                        NOT NULL COMMENT '邀请码',
-    expiry     BIGINT   DEFAULT 0                 NOT NULL COMMENT '过期时间',
     createTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
     updateTime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     available  BOOL     DEFAULT TRUE              NOT NULL COMMENT '是否可用'

@@ -10,8 +10,6 @@ import cn.watchdog.license.service.ChartService;
 import cn.watchdog.license.util.IpRegionUtil;
 import cn.watchdog.license.util.NetUtil;
 import cn.watchdog.license.util.VersionUtil;
-import cn.watchdog.license.util.chart.ChartData;
-import cn.watchdog.license.util.chart.ChartType;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -67,10 +65,5 @@ public class RootController {
 	@RequestMapping("/ip")
 	public ResponseEntity<BaseResponse<IpRegionUtil.Region>> getIpRegion(HttpServletRequest request) {
 		return ResultUtil.ok(IpRegionUtil.getInstance().search(NetUtil.getIpAddress(request)));
-	}
-
-	@RequestMapping("/chart")
-	public ResponseEntity<BaseResponse<List<ChartData>>> chart(HttpServletRequest request) {
-		return ResultUtil.ok(chartService.getChartDataForType(ChartType.USER_CREATE, 30));
 	}
 }

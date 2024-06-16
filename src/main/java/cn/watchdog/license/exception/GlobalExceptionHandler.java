@@ -37,7 +37,7 @@ public class GlobalExceptionHandler {
 		l.setResult(e.getMessage());
 		logService.addLog(l, e.getRequest());
 		log.error("businessException, id: {}, message: {}", requestId, e.getMessage(), e);
-		ResponseEntity<BaseResponse<Object>> ret = ResultUtil.failed(e.getCode(), e.getMessage(), e.getStatus());
+		ResponseEntity<BaseResponse<Object>> ret = ResultUtil.failed(e.getCode(), e.getData(), e.getMessage(), e.getStatus());
 		BaseResponse<Object> body = ret.getBody();
 		BaseResponse.RequestInfo requestInfo = new BaseResponse.RequestInfo();
 		requestInfo.setRequestId(requestId);

@@ -1,8 +1,11 @@
 package cn.watchdog.license.factory;
 
 import cn.watchdog.license.service.ChartDataSourceService;
-import cn.watchdog.license.service.impl.chart.UserCreateService;
+import cn.watchdog.license.service.impl.chart.LogChartService;
+import cn.watchdog.license.service.impl.chart.SecurityLogChartService;
+import cn.watchdog.license.service.impl.chart.UserCreateChartService;
 import cn.watchdog.license.util.chart.ChartType;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 
@@ -14,9 +17,17 @@ public class ChartDataSourceServiceFactory {
 	private final EnumMap<ChartType, ChartDataSourceService> serviceMap = new EnumMap<>(ChartType.class);
 
 	@Resource
-	public void registerServices(UserCreateService userCreateService) {
-		serviceMap.put(ChartType.USER_CREATE, userCreateService);
-		// 注册更多的服务
+	private UserCreateChartService userCreateChartService;
+	@Resource
+	private SecurityLogChartService securityLogChartService;
+	@Resource
+	private LogChartService logChartService;
+
+	@PostConstruct
+	public void registerServices() {
+		serviceMap.put(ChartType.USER_CREATE, userCreateChartService);
+		serviceMap.put(ChartType.SECURITY_LOG, securityLogChartService);
+		serviceMap.put(ChartType.LOG, logChartService);
 	}
 
 	public ChartDataSourceService getService(ChartType chatType) {

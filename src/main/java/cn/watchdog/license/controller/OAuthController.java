@@ -7,6 +7,7 @@ import cn.watchdog.license.common.ReturnCode;
 import cn.watchdog.license.constant.CommonConstant;
 import cn.watchdog.license.exception.BusinessException;
 import cn.watchdog.license.model.dto.NotifyResponse;
+import cn.watchdog.license.model.dto.OAuthInfoResult;
 import cn.watchdog.license.model.entity.OAuth;
 import cn.watchdog.license.model.entity.User;
 import cn.watchdog.license.model.enums.NotifyType;
@@ -33,6 +34,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 @RestController
 @RequestMapping("/oauth")
@@ -89,19 +92,55 @@ public class OAuthController {
 		return notifyResponse;
 	}
 
+	@GetMapping("/enablelist")
+	public ResponseEntity<BaseResponse<List<Integer>>> enableList(HttpServletResponse response) {
+		List<Integer> ret = new ArrayList<>();
+		if (githubEnable) {
+			ret.add(OAuthPlatForm.GITHUB.getCode());
+		}
+		if (giteeEnable) {
+			ret.add(OAuthPlatForm.GITEE.getCode());
+		}
+		if (microsoftEnable) {
+			ret.add(OAuthPlatForm.MICROSOFT.getCode());
+		}
+		if (qqEnable) {
+			ret.add(OAuthPlatForm.QQ.getCode());
+		}
+		if (bilibiliEnable) {
+			ret.add(OAuthPlatForm.BILIBILI.getCode());
+		}
+		if (wechatEnable) {
+			ret.add(OAuthPlatForm.WECHAT.getCode());
+		}
+		return ResultUtil.ok(ret);
+	}
+
 	@GetMapping("/info")
 	@AuthCheck()
-	public ResponseEntity<BaseResponse<String>> oauth(Integer type, HttpServletRequest request, HttpServletResponse response) {
+	public ResponseEntity<BaseResponse<OAuthInfoResult>> oauth(Integer type, HttpServletRequest request, HttpServletResponse response) {
 		OAuthPlatForm oAuthPlatForm = OAuthPlatForm.valueOf(type);
+		OAuthInfoResult result = new OAuthInfoResult();
+		result.setType(type);
+		result.setEnable(oAuthPlatForm != null && switch (oAuthPlatForm) {
+			case GITHUB -> githubEnable;
+			case GITEE -> giteeEnable;
+			case MICROSOFT -> microsoftEnable;
+			case QQ -> qqEnable;
+			case BILIBILI -> bilibiliEnable;
+			case WECHAT -> wechatEnable;
+			default -> false;
+		});
 		if (oAuthPlatForm == null) {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, "Invalid type", request);
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "Invalid type", result, request);
 		}
 		User user = userService.getLoginUser(request);
 		OAuth oAuth = userService.getOAuthByUidAndPlatform(user, oAuthPlatForm, request);
 		if (oAuth == null) {
-			throw new BusinessException(ReturnCode.PARAMS_ERROR, "OAuth not found", request);
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "OAuth not found", result, request);
 		}
-		return ResultUtil.ok(oAuth.getOpenId());
+		result.setOpenId(oAuth.getOpenId());
+		return ResultUtil.ok(result);
 	}
 
 	@DeleteMapping("/unbind")

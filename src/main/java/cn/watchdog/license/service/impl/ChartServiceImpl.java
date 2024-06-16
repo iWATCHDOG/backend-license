@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.EnumMap;
 import java.util.List;
@@ -43,6 +45,30 @@ public class ChartServiceImpl implements ChartService {
 	@Resource
 	private ChartDataSourceServiceFactory dataSourceServiceFactory;
 
+	public static List<ChartData> formatChartDataDates(List<ChartData> chartDataList) {
+		if (chartDataList == null || chartDataList.isEmpty()) {
+			return Collections.emptyList();
+		}
+
+		List<ChartData> result = new ArrayList<>(chartDataList);
+
+		// 按日期排序
+		result.sort(Comparator.comparing(ChartData::getData));
+
+		int size = result.size();
+		if (size < 2) {
+			return result; // 如果列表少于两个元素，直接返回
+		}
+		for (ChartData chartData : result) {
+			String date = chartData.getData();
+			// 日期格式为yyyy-MM-dd。去除年份部分，只保留月份和日期部分。但如果是1月1日，保留年份部分
+			if (!date.endsWith("01-01")) {
+				chartData.setData(date.substring(5));
+			}
+		}
+		return result;
+	}
+
 	@Override
 	public List<ChartData> getChartDataForType(ChartType chatType, int days) {
 		List<ChartData> chartDataList = new ArrayList<>();
@@ -57,7 +83,7 @@ public class ChartServiceImpl implements ChartService {
 			chartDataList.add(new ChartData(key, count));
 		}
 
-		return chartDataList;
+		return formatChartDataDates(chartDataList);
 	}
 
 	private Date toDateFromLocalDateTime(LocalDateTime dateTime, ZoneId zoneId) {

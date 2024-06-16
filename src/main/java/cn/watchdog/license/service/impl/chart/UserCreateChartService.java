@@ -10,15 +10,15 @@ import org.springframework.stereotype.Service;
 import java.util.Date;
 
 @Service
-public class UserCreateService implements ChartDataSourceService {
+public class UserCreateChartService implements ChartDataSourceService {
 
 	@Resource
-	private UserService userService;
+	private UserService service;
 
 	@Override
 	public long getCountForDate(Date date) {
 		QueryWrapper<User> queryWrapper = new QueryWrapper<>();
 		queryWrapper.lambda().between(User::getCreateTime, date, new Date(date.getTime() + 24 * 60 * 60 * 1000));
-		return userService.count(queryWrapper);
+		return service.count(queryWrapper);
 	}
 }

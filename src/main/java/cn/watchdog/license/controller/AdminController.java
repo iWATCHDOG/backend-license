@@ -6,6 +6,7 @@ import cn.watchdog.license.common.ResultUtil;
 import cn.watchdog.license.common.ReturnCode;
 import cn.watchdog.license.constant.CommonConstant;
 import cn.watchdog.license.exception.BusinessException;
+import cn.watchdog.license.model.dto.ChartRequest;
 import cn.watchdog.license.model.dto.LogQueryRequest;
 import cn.watchdog.license.model.dto.blacklist.AddBlackListRequest;
 import cn.watchdog.license.model.dto.blacklist.BlacklistQueryRequest;
@@ -24,6 +25,7 @@ import cn.watchdog.license.model.enums.UserStatus;
 import cn.watchdog.license.model.vo.PermissionVO;
 import cn.watchdog.license.model.vo.UserVO;
 import cn.watchdog.license.service.BlacklistService;
+import cn.watchdog.license.service.ChartService;
 import cn.watchdog.license.service.LogService;
 import cn.watchdog.license.service.PermissionService;
 import cn.watchdog.license.service.SecurityLogService;
@@ -31,6 +33,8 @@ import cn.watchdog.license.service.UserService;
 import cn.watchdog.license.util.ExcelUtil;
 import cn.watchdog.license.util.NetUtil;
 import cn.watchdog.license.util.PasswordUtil;
+import cn.watchdog.license.util.chart.ChartData;
+import cn.watchdog.license.util.chart.ChartType;
 import com.alibaba.excel.EasyExcel;
 import com.alibaba.excel.ExcelWriter;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -71,6 +75,8 @@ public class AdminController {
 	private BlacklistService blacklistService;
 	@Resource
 	private SecurityLogService securityLogService;
+	@Resource
+	private ChartService chartService;
 
 	@PostMapping("/user/add")
 	@AuthCheck(must = "*")
@@ -534,5 +540,28 @@ public class AdminController {
 			}
 		}
 		return ResultUtil.ok(fileName);
+	}
+
+	@RequestMapping("/chart")
+	@AuthCheck(must = "*")
+	public ResponseEntity<BaseResponse<List<ChartData>>> chart(ChartRequest chartRequest, HttpServletRequest request) {
+		if (chartRequest == null) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数错误", request);
+		}
+		String type = chartRequest.getType();
+		Integer days = chartRequest.getDays();
+		ChartType chatType;
+		try {
+			chatType = ChartType.valueOf(type.toUpperCase());
+		} catch (IllegalArgumentException e) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数错误", request);
+		}
+		if (days == null) {
+			days = 7;
+		}
+		if (days < 1 || days > 400) {
+			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数错误", request);
+		}
+		return ResultUtil.ok(chartService.getChartDataForType(chatType, days));
 	}
 }

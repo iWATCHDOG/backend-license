@@ -51,7 +51,7 @@ public class InitializationRunner implements ApplicationRunner {
 	}
 
 	public void initChartData() {
-		int days = 90;
+		int days = 45;
 		for (ChartType value : ChartType.values()) {
 			chartService.getChartDataForType(value, days);
 		}

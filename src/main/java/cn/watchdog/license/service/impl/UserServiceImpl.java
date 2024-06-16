@@ -2,6 +2,7 @@ package cn.watchdog.license.service.impl;
 
 import cn.watchdog.license.common.ReturnCode;
 import cn.watchdog.license.constant.CommonConstant;
+import cn.watchdog.license.events.UserLoginEvent;
 import cn.watchdog.license.exception.BusinessException;
 import cn.watchdog.license.mapper.OAuthMapper;
 import cn.watchdog.license.mapper.UserMapper;
@@ -39,6 +40,7 @@ import net.coobird.thumbnailator.Thumbnails;
 import okhttp3.OkHttpClient;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
@@ -74,6 +76,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 	// 在UserServiceImpl类中，创建一个新的Caffeine缓存
 	private static final Cache<String, Integer> failLoginCache = CaffeineFactory.newBuilder().expireAfterWrite(30, TimeUnit.MINUTES).build();
 	private static final Cache<Long, User> userCache = CaffeineFactory.newBuilder().expireAfterWrite(3, TimeUnit.SECONDS).build();
+	private final ApplicationEventPublisher eventPublisher;
 	@Resource
 	private OAuthMapper oAuthMapper;
 	@Resource
@@ -82,6 +85,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 	private SecurityLogService securityLogService;
 	@Resource
 	private JdbcTemplate jdbcTemplate;
+
+	public UserServiceImpl(ApplicationEventPublisher eventPublisher) {
+		this.eventPublisher = eventPublisher;
+	}
 
 	@Override
 	public boolean userAdd(User user, HttpServletRequest request) {
@@ -133,6 +140,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空", request);
 		}
 		User user = checkToken(token, request);
+		UserLoginEvent event = new UserLoginEvent(this, user);
+		event.setToken(token);
+		eventPublisher.publishEvent(event);
+		if (event.isCancelled()) {
+			throw new BusinessException(ReturnCode.OPERATION_ERROR, "登录被取消，请联系管理员", request);
+		}
 		setLoginState(user, request);
 		return user;
 	}
@@ -334,6 +347,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			if (user == null) {
 				throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "账户信息不存在", request);
 			}
+			UserLoginEvent event = new UserLoginEvent(this, user);
+			event.setOAuth(oAuth);
+			eventPublisher.publishEvent(event);
+			if (event.isCancelled()) {
+				throw new BusinessException(ReturnCode.OPERATION_ERROR, "登录被取消，请联系管理员", request);
+			}
 			setLoginState(user, request);
 			return user;
 		}
@@ -410,6 +429,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		if (!PasswordUtil.checkPassword(password, user.getPassword())) {
 			addFailLogin(account, request);
 			throw new BusinessException(ReturnCode.VALIDATION_FAILED, "密码错误", request);
+		}
+		UserLoginEvent event = new UserLoginEvent(this, user);
+		eventPublisher.publishEvent(event);
+		if (event.isCancelled()) {
+			throw new BusinessException(ReturnCode.OPERATION_ERROR, "登录被取消，请联系管理员", request);
 		}
 		setLoginState(user, request);
 		return user;

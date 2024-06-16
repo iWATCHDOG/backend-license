@@ -1,6 +1,7 @@
 package cn.watchdog.license.service.impl;
 
 import cn.watchdog.license.common.ReturnCode;
+import cn.watchdog.license.events.LogAddEvent;
 import cn.watchdog.license.exception.BusinessException;
 import cn.watchdog.license.mapper.LogMapper;
 import cn.watchdog.license.model.entity.Log;
@@ -14,14 +15,18 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
 public class LogServiceImpl extends ServiceImpl<LogMapper, Log> implements LogService {
+	private final ApplicationEventPublisher eventPublisher;
 	@Resource
 	private UserService userService;
+
+	public LogServiceImpl(ApplicationEventPublisher eventPublisher) {this.eventPublisher = eventPublisher;}
 
 	@Override
 	@Async
@@ -55,6 +60,11 @@ public class LogServiceImpl extends ServiceImpl<LogMapper, Log> implements LogSe
 			}
 			l.setResult(result);
 		} catch (Exception ignored) {
+		}
+		LogAddEvent event = new LogAddEvent(this, l);
+		eventPublisher.publishEvent(event);
+		if (event.isCancelled()) {
+			throw new BusinessException(ReturnCode.CANCELLED, "日志记录被取消", request);
 		}
 		this.save(l);
 	}

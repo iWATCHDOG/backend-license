@@ -2,7 +2,7 @@ package cn.watchdog.license.service.impl;
 
 import cn.watchdog.license.common.ReturnCode;
 import cn.watchdog.license.constant.CommonConstant;
-import cn.watchdog.license.events.UserLoginEvent;
+import cn.watchdog.license.events.user.UserLoginEvent;
 import cn.watchdog.license.exception.BusinessException;
 import cn.watchdog.license.mapper.OAuthMapper;
 import cn.watchdog.license.mapper.UserMapper;
@@ -144,7 +144,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		event.setToken(token);
 		eventPublisher.publishEvent(event);
 		if (event.isCancelled()) {
-			throw new BusinessException(ReturnCode.OPERATION_ERROR, "登录被取消，请联系管理员", request);
+			throw new BusinessException(ReturnCode.CANCELLED, "登录被取消", request);
 		}
 		setLoginState(user, request);
 		return user;
@@ -351,7 +351,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			event.setOAuth(oAuth);
 			eventPublisher.publishEvent(event);
 			if (event.isCancelled()) {
-				throw new BusinessException(ReturnCode.OPERATION_ERROR, "登录被取消，请联系管理员", request);
+				throw new BusinessException(ReturnCode.CANCELLED, "登录被取消", request);
 			}
 			setLoginState(user, request);
 			return user;
@@ -433,7 +433,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		UserLoginEvent event = new UserLoginEvent(this, user);
 		eventPublisher.publishEvent(event);
 		if (event.isCancelled()) {
-			throw new BusinessException(ReturnCode.OPERATION_ERROR, "登录被取消，请联系管理员", request);
+			throw new BusinessException(ReturnCode.CANCELLED, "登录被取消", request);
 		}
 		setLoginState(user, request);
 		return user;

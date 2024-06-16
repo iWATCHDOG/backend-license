@@ -32,8 +32,6 @@ public interface PermissionService extends IService<Permission> {
 
 	void removePermission(PermissionRemoveRequest permissionRemoveRequest, boolean admin, HttpServletRequest request);
 
-	void updatePermission(long uid, String permission, long expiry, boolean admin, HttpServletRequest request);
-
 	List<Permission> getGroups(long uid, HttpServletRequest request);
 
 	Group getMaxPriorityGroup(long uid, HttpServletRequest request);

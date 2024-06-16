@@ -54,7 +54,12 @@ public enum ReturnCode {
 	/**
 	 * 操作失败
 	 */
-	OPERATION_ERROR(50001, "Operation failed", StatusCode.INTERNAL_SERVER_ERROR);
+	OPERATION_ERROR(50001, "Operation failed", StatusCode.INTERNAL_SERVER_ERROR),
+	/**
+	 * 被取消
+	 */
+	CANCELLED(50002, "Cancelled", StatusCode.INTERNAL_SERVER_ERROR),
+	;
 
 	/**
 	 * 状态码

@@ -1,5 +1,6 @@
-package cn.watchdog.license.events;
+package cn.watchdog.license.events.user;
 
+import cn.watchdog.license.events.Cancellable;
 import cn.watchdog.license.model.entity.OAuth;
 import cn.watchdog.license.model.entity.User;
 import lombok.Getter;

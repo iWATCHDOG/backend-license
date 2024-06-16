@@ -1,6 +1,10 @@
 package cn.watchdog.license.service.impl;
 
 import cn.watchdog.license.common.ReturnCode;
+import cn.watchdog.license.events.permission.PermissionAddEvent;
+import cn.watchdog.license.events.permission.PermissionRemoveByUidEvent;
+import cn.watchdog.license.events.permission.PermissionRemoveEvent;
+import cn.watchdog.license.events.permission.PermissionUpdateEvent;
 import cn.watchdog.license.exception.BusinessException;
 import cn.watchdog.license.mapper.PermissionMapper;
 import cn.watchdog.license.model.dto.permission.PermissionAddRequest;
@@ -23,6 +27,7 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -34,12 +39,14 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permission> implements PermissionService {
 	private static final Cache<Long, Set<Permission>> userPermissions = CaffeineFactory.newBuilder().expireAfterWrite(3, TimeUnit.MINUTES).build();
-
+	private final ApplicationEventPublisher eventPublisher;
 	@Resource
 	private SecurityLogService securityLogService;
 
 	@Resource
 	private UserService userService;
+
+	public PermissionServiceImpl(ApplicationEventPublisher eventPublisher) {this.eventPublisher = eventPublisher;}
 
 	@Override
 	public Set<Permission> getUserPermissions(long uid, HttpServletRequest request) {
@@ -98,6 +105,11 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 
 	@Override
 	public void updatePermission(PermissionUpdateRequest permissionUpdateRequest, boolean admin, HttpServletRequest request) {
+		PermissionUpdateEvent event = new PermissionUpdateEvent(this, permissionUpdateRequest, admin);
+		eventPublisher.publishEvent(event);
+		if (event.isCancelled()) {
+			throw new BusinessException(ReturnCode.CANCELLED, "修改权限被取消", request);
+		}
 		// id 和 uid 不能修改
 		long id = permissionUpdateRequest.getId();
 		String newPermission = permissionUpdateRequest.getPermission();
@@ -168,6 +180,11 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 
 	@Override
 	public void addPermission(long uid, String permission, long expiry, boolean admin, HttpServletRequest request) {
+		PermissionAddEvent event = new PermissionAddEvent(this, uid, permission, expiry, admin);
+		eventPublisher.publishEvent(event);
+		if (event.isCancelled()) {
+			throw new BusinessException(ReturnCode.CANCELLED, "添加权限被取消", request);
+		}
 		userPermissions.invalidate(uid);
 		Permission permissionQuery = getPermission(uid, permission, request);
 		if (permissionQuery == null) {
@@ -221,6 +238,11 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 
 	@Override
 	public void removePermission(long uid, String permission, boolean admin, HttpServletRequest request) {
+		PermissionRemoveByUidEvent event = new PermissionRemoveByUidEvent(this, uid, permission, admin);
+		eventPublisher.publishEvent(event);
+		if (event.isCancelled()) {
+			throw new BusinessException(ReturnCode.CANCELLED, "移除权限被取消", request);
+		}
 		userPermissions.invalidate(uid);
 		Permission permissionQuery = getPermission(uid, permission, request);
 		if (permissionQuery != null) {
@@ -232,6 +254,11 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 	@Override
 	public void removePermission(long id, boolean admin, HttpServletRequest request) {
 		Permission permissionQuery = this.getById(id);
+		PermissionRemoveEvent event = new PermissionRemoveEvent(this, permissionQuery);
+		eventPublisher.publishEvent(event);
+		if (event.isCancelled()) {
+			throw new BusinessException(ReturnCode.CANCELLED, "移除权限被取消", request);
+		}
 		if (permissionQuery != null) {
 			removePermissionSecurityLog(permissionQuery.getUid(), permissionQuery.getPermission(), false, admin, request);
 			this.removeById(permissionQuery.getId());
@@ -279,17 +306,6 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 			securityLog.setInfo("移除权限：" + sp + "，操作人：" + du);
 			securityLogService.save(securityLog);
 		}
-	}
-
-	@Override
-	public void updatePermission(long uid, String permission, long expiry, boolean admin, HttpServletRequest request) {
-		userPermissions.invalidate(uid);
-		Permission permissionQuery = getPermission(uid, permission, request);
-		if (permissionQuery != null) {
-			permissionQuery.setExpiry(expiry);
-			this.updateById(permissionQuery);
-		}
-		userPermissions.invalidate(uid);
 	}
 
 	@Override

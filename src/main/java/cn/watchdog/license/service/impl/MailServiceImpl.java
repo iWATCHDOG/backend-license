@@ -1,6 +1,7 @@
 package cn.watchdog.license.service.impl;
 
 import cn.watchdog.license.common.ReturnCode;
+import cn.watchdog.license.events.EmailSendEvent;
 import cn.watchdog.license.exception.BusinessException;
 import cn.watchdog.license.service.MailService;
 import cn.watchdog.license.util.CaffeineFactory;
@@ -9,6 +10,7 @@ import jakarta.annotation.Resource;
 import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -24,6 +26,7 @@ public class MailServiceImpl implements MailService {
 	public static final Cache<String, Boolean> emailSent = CaffeineFactory.newBuilder()
 			.expireAfterWrite(1, TimeUnit.MINUTES)
 			.build();
+	private final ApplicationEventPublisher eventPublisher;
 	@Resource
 	private JavaMailSender javaMailSender;
 	@Resource
@@ -32,6 +35,8 @@ public class MailServiceImpl implements MailService {
 	private String from;
 	@Value("${website.url}")
 	private String websiteUrl;
+
+	public MailServiceImpl(ApplicationEventPublisher eventPublisher) {this.eventPublisher = eventPublisher;}
 
 	@Async
 	@Override
@@ -48,6 +53,11 @@ public class MailServiceImpl implements MailService {
 			context.setVariable("code", code);
 			String text = templateEngine.process("EmailCode", context);
 			helper.setText(text, true);
+			EmailSendEvent event = new EmailSendEvent(this, to, message);
+			eventPublisher.publishEvent(event);
+			if (event.isCancelled()) {
+				throw new BusinessException(ReturnCode.CANCELLED, "邮件发送被取消", null);
+			}
 			javaMailSender.send(message);
 		} catch (Exception e) {
 			log.error(e.toString());
@@ -70,6 +80,11 @@ public class MailServiceImpl implements MailService {
 			context.setVariable("link", link);
 			String text = templateEngine.process("ForgetPassword", context);
 			helper.setText(text, true);
+			EmailSendEvent event = new EmailSendEvent(this, to, message);
+			eventPublisher.publishEvent(event);
+			if (event.isCancelled()) {
+				throw new BusinessException(ReturnCode.CANCELLED, "邮件发送被取消", null);
+			}
 			javaMailSender.send(message);
 		} catch (Exception e) {
 			log.error(e.toString());

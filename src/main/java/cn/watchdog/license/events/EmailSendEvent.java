@@ -1,6 +1,7 @@
 package cn.watchdog.license.events;
 
 import jakarta.mail.internet.MimeMessage;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -13,12 +14,14 @@ public class EmailSendEvent extends ApplicationEvent implements Cancellable {
 	private String to;
 	@Setter
 	private MimeMessage mimeMessage;
+	private final HttpServletRequest request;
 	private boolean cancelled = false;
 
-	public EmailSendEvent(Object source, String to, MimeMessage mimeMessage) {
+	public EmailSendEvent(Object source, String to, MimeMessage mimeMessage, HttpServletRequest request) {
 		super(source);
 		this.to = to;
 		this.mimeMessage = mimeMessage;
+		this.request = request;
 	}
 
 	@Override

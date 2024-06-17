@@ -140,7 +140,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空", request);
 		}
 		User user = checkToken(token, request);
-		UserLoginEvent event = new UserLoginEvent(this, user);
+		UserLoginEvent event = new UserLoginEvent(this, user, request);
 		event.setToken(token);
 		eventPublisher.publishEvent(event);
 		if (event.isCancelled()) {
@@ -347,7 +347,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			if (user == null) {
 				throw new BusinessException(ReturnCode.NOT_FOUND_ERROR, "账户信息不存在", request);
 			}
-			UserLoginEvent event = new UserLoginEvent(this, user);
+			UserLoginEvent event = new UserLoginEvent(this, user, request);
 			event.setOAuth(oAuth);
 			eventPublisher.publishEvent(event);
 			if (event.isCancelled()) {
@@ -430,7 +430,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			addFailLogin(account, request);
 			throw new BusinessException(ReturnCode.VALIDATION_FAILED, "密码错误", request);
 		}
-		UserLoginEvent event = new UserLoginEvent(this, user);
+		UserLoginEvent event = new UserLoginEvent(this, user, request);
 		eventPublisher.publishEvent(event);
 		if (event.isCancelled()) {
 			throw new BusinessException(ReturnCode.CANCELLED, "登录被取消", request);

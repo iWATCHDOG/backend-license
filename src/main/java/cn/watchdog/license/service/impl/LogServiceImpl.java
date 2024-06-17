@@ -61,7 +61,7 @@ public class LogServiceImpl extends ServiceImpl<LogMapper, Log> implements LogSe
 			l.setResult(result);
 		} catch (Exception ignored) {
 		}
-		LogAddEvent event = new LogAddEvent(this, l);
+		LogAddEvent event = new LogAddEvent(this, l, request);
 		eventPublisher.publishEvent(event);
 		if (event.isCancelled()) {
 			throw new BusinessException(ReturnCode.CANCELLED, "日志记录被取消", request);

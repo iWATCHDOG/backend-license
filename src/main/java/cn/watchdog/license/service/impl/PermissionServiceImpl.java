@@ -105,7 +105,7 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 
 	@Override
 	public void updatePermission(PermissionUpdateRequest permissionUpdateRequest, boolean admin, HttpServletRequest request) {
-		PermissionUpdateEvent event = new PermissionUpdateEvent(this, permissionUpdateRequest, admin);
+		PermissionUpdateEvent event = new PermissionUpdateEvent(this, permissionUpdateRequest, admin, request);
 		eventPublisher.publishEvent(event);
 		if (event.isCancelled()) {
 			throw new BusinessException(ReturnCode.CANCELLED, "修改权限被取消", request);
@@ -180,7 +180,7 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 
 	@Override
 	public void addPermission(long uid, String permission, long expiry, boolean admin, HttpServletRequest request) {
-		PermissionAddEvent event = new PermissionAddEvent(this, uid, permission, expiry, admin);
+		PermissionAddEvent event = new PermissionAddEvent(this, uid, permission, expiry, admin, request);
 		eventPublisher.publishEvent(event);
 		if (event.isCancelled()) {
 			throw new BusinessException(ReturnCode.CANCELLED, "添加权限被取消", request);
@@ -238,7 +238,7 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 
 	@Override
 	public void removePermission(long uid, String permission, boolean admin, HttpServletRequest request) {
-		PermissionRemoveByUidEvent event = new PermissionRemoveByUidEvent(this, uid, permission, admin);
+		PermissionRemoveByUidEvent event = new PermissionRemoveByUidEvent(this, uid, permission, admin, request);
 		eventPublisher.publishEvent(event);
 		if (event.isCancelled()) {
 			throw new BusinessException(ReturnCode.CANCELLED, "移除权限被取消", request);
@@ -254,7 +254,7 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 	@Override
 	public void removePermission(long id, boolean admin, HttpServletRequest request) {
 		Permission permissionQuery = this.getById(id);
-		PermissionRemoveEvent event = new PermissionRemoveEvent(this, permissionQuery);
+		PermissionRemoveEvent event = new PermissionRemoveEvent(this, permissionQuery, request);
 		eventPublisher.publishEvent(event);
 		if (event.isCancelled()) {
 			throw new BusinessException(ReturnCode.CANCELLED, "移除权限被取消", request);

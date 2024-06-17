@@ -53,7 +53,7 @@ public class MailServiceImpl implements MailService {
 			context.setVariable("code", code);
 			String text = templateEngine.process("EmailCode", context);
 			helper.setText(text, true);
-			EmailSendEvent event = new EmailSendEvent(this, to, message);
+			EmailSendEvent event = new EmailSendEvent(this, to, message, null);
 			eventPublisher.publishEvent(event);
 			if (event.isCancelled()) {
 				throw new BusinessException(ReturnCode.CANCELLED, "邮件发送被取消", null);
@@ -80,7 +80,7 @@ public class MailServiceImpl implements MailService {
 			context.setVariable("link", link);
 			String text = templateEngine.process("ForgetPassword", context);
 			helper.setText(text, true);
-			EmailSendEvent event = new EmailSendEvent(this, to, message);
+			EmailSendEvent event = new EmailSendEvent(this, to, message, null);
 			eventPublisher.publishEvent(event);
 			if (event.isCancelled()) {
 				throw new BusinessException(ReturnCode.CANCELLED, "邮件发送被取消", null);

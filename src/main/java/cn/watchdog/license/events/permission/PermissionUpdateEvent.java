@@ -2,6 +2,7 @@ package cn.watchdog.license.events.permission;
 
 import cn.watchdog.license.events.Cancellable;
 import cn.watchdog.license.model.dto.permission.PermissionUpdateRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -14,12 +15,14 @@ public class PermissionUpdateEvent extends ApplicationEvent implements Cancellab
 	private PermissionUpdateRequest permissionUpdateRequest;
 	@Setter
 	private boolean admin;
+	private final HttpServletRequest request;
 	private boolean cancelled = false;
 
-	public PermissionUpdateEvent(Object source, PermissionUpdateRequest permissionUpdateRequest, boolean admin) {
+	public PermissionUpdateEvent(Object source, PermissionUpdateRequest permissionUpdateRequest, boolean admin, HttpServletRequest request) {
 		super(source);
 		this.permissionUpdateRequest = permissionUpdateRequest;
 		this.admin = admin;
+		this.request = request;
 	}
 
 	@Override

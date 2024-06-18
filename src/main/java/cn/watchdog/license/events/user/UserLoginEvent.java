@@ -13,12 +13,11 @@ import org.springframework.context.ApplicationEvent;
 @Slf4j
 public class UserLoginEvent extends ApplicationEvent implements Cancellable {
 	private final User user;
+	private final HttpServletRequest request;
 	@Setter
 	private String token;
 	@Setter
 	private OAuth oAuth;
-
-	private final HttpServletRequest request;
 	private boolean cancelled = false;
 
 	public UserLoginEvent(Object source, User user, HttpServletRequest request) {

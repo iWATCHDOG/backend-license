@@ -1,6 +1,6 @@
 package cn.watchdog.license.events;
 
-import jakarta.mail.internet.MimeMessage;
+import cn.watchdog.license.model.entity.Photo;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Getter;
 import lombok.Setter;
@@ -9,18 +9,21 @@ import org.springframework.context.ApplicationEvent;
 
 @Getter
 @Slf4j
-public class EmailSendEvent extends ApplicationEvent implements Cancellable {
+public class PhotoAddEvent extends ApplicationEvent implements Cancellable {
 	private final HttpServletRequest request;
 	@Setter
-	private String to;
+	private Photo photo;
+	/**
+	 * 是否已经添加
+	 * 如果已经添加则不再添加，并且{cancelled}事件也不会被触发
+	 */
 	@Setter
-	private MimeMessage mimeMessage;
+	private boolean added = false;
 	private boolean cancelled = false;
 
-	public EmailSendEvent(Object source, String to, MimeMessage mimeMessage, HttpServletRequest request) {
+	public PhotoAddEvent(Object source, Photo photo, HttpServletRequest request) {
 		super(source);
-		this.to = to;
-		this.mimeMessage = mimeMessage;
+		this.photo = photo;
 		this.request = request;
 	}
 

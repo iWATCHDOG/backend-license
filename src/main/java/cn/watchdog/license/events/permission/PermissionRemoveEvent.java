@@ -11,15 +11,15 @@ import org.springframework.context.ApplicationEvent;
 @Getter
 @Slf4j
 public class PermissionRemoveEvent extends ApplicationEvent implements Cancellable {
-	private final Permission id;
+	private final Permission permission;
+	private final HttpServletRequest request;
 	@Setter
 	private boolean admin;
-	private final HttpServletRequest request;
 	private boolean cancelled = false;
 
-	public PermissionRemoveEvent(Object source, Permission id, HttpServletRequest request) {
+	public PermissionRemoveEvent(Object source, Permission permission, HttpServletRequest request) {
 		super(source);
-		this.id = id;
+		this.permission = permission;
 		this.request = request;
 	}
 

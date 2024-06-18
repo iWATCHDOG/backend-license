@@ -1,6 +1,6 @@
 package cn.watchdog.license.listeners;
 
-import cn.watchdog.license.events.LogAddEvent;
+import cn.watchdog.license.events.PhotoAddEvent;
 import cn.watchdog.license.service.SecurityLogService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -9,12 +9,12 @@ import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
-public class LogListeners {
+public class PhotoListeners {
 	@Resource
 	private SecurityLogService securityLogService;
 
 	@EventListener
-	public void onLogAdd(LogAddEvent event) {
-		// do something
+	public void onPhotoAdd(PhotoAddEvent event) {
+
 	}
 }

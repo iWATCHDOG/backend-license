@@ -14,7 +14,7 @@ public class MailListeners {
 	private SecurityLogService securityLogService;
 
 	@EventListener
-	public void emailSend(EmailSendEvent event) {
+	public void onEmailSend(EmailSendEvent event) {
 
 	}
 }

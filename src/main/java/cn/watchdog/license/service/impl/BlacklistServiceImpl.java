@@ -11,7 +11,6 @@ import cn.watchdog.license.model.entity.Log;
 import cn.watchdog.license.model.entity.User;
 import cn.watchdog.license.service.BlacklistService;
 import cn.watchdog.license.service.LogService;
-import cn.watchdog.license.service.SecurityLogService;
 import cn.watchdog.license.service.UserService;
 import cn.watchdog.license.util.CaffeineFactory;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -33,8 +32,6 @@ public class BlacklistServiceImpl extends ServiceImpl<BlacklistMapper, Blacklist
 	private final ApplicationEventPublisher eventPublisher;
 	@Resource
 	private LogService logService;
-	@Resource
-	private SecurityLogService securityLogService;
 	@Resource
 	private UserService userService;
 

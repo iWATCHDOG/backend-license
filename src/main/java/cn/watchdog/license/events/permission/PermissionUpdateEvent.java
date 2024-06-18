@@ -11,11 +11,11 @@ import org.springframework.context.ApplicationEvent;
 @Getter
 @Slf4j
 public class PermissionUpdateEvent extends ApplicationEvent implements Cancellable {
+	private final HttpServletRequest request;
 	@Setter
 	private PermissionUpdateRequest permissionUpdateRequest;
 	@Setter
 	private boolean admin;
-	private final HttpServletRequest request;
 	private boolean cancelled = false;
 
 	public PermissionUpdateEvent(Object source, PermissionUpdateRequest permissionUpdateRequest, boolean admin, HttpServletRequest request) {

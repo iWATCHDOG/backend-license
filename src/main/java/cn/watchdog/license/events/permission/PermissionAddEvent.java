@@ -11,6 +11,7 @@ import org.springframework.context.ApplicationEvent;
 @Getter
 @Slf4j
 public class PermissionAddEvent extends ApplicationEvent implements Cancellable {
+	private final HttpServletRequest request;
 	@Setter
 	private long uid;
 	@Setter
@@ -19,7 +20,6 @@ public class PermissionAddEvent extends ApplicationEvent implements Cancellable 
 	private long expiry;
 	@Setter
 	private boolean admin;
-	private final HttpServletRequest request;
 	private boolean cancelled = false;
 
 	public PermissionAddEvent(Object source, PermissionAddRequest permissionAddRequest, HttpServletRequest request) {

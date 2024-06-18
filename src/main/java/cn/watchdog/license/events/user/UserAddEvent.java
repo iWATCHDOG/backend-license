@@ -1,26 +1,22 @@
-package cn.watchdog.license.events;
+package cn.watchdog.license.events.user;
 
-import jakarta.mail.internet.MimeMessage;
+import cn.watchdog.license.events.Cancellable;
+import cn.watchdog.license.model.entity.User;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEvent;
 
 @Getter
 @Slf4j
-public class EmailSendEvent extends ApplicationEvent implements Cancellable {
+public class UserAddEvent extends ApplicationEvent implements Cancellable {
+	private final User user;
 	private final HttpServletRequest request;
-	@Setter
-	private String to;
-	@Setter
-	private MimeMessage mimeMessage;
 	private boolean cancelled = false;
 
-	public EmailSendEvent(Object source, String to, MimeMessage mimeMessage, HttpServletRequest request) {
+	public UserAddEvent(Object source, User user, HttpServletRequest request) {
 		super(source);
-		this.to = to;
-		this.mimeMessage = mimeMessage;
+		this.user = user;
 		this.request = request;
 	}
 

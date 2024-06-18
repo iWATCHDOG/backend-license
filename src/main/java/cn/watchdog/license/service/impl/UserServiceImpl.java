@@ -2,6 +2,9 @@ package cn.watchdog.license.service.impl;
 
 import cn.watchdog.license.common.ReturnCode;
 import cn.watchdog.license.constant.CommonConstant;
+import cn.watchdog.license.events.user.UserAddEvent;
+import cn.watchdog.license.events.user.UserAddSuccessEvent;
+import cn.watchdog.license.events.user.UserCreateEvent;
 import cn.watchdog.license.events.user.UserLoginEvent;
 import cn.watchdog.license.exception.BusinessException;
 import cn.watchdog.license.mapper.OAuthMapper;
@@ -95,6 +98,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 		if (user == null) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空", request);
 		}
+		UserAddEvent event = new UserAddEvent(this, user, request);
+		eventPublisher.publishEvent(event);
+		if (event.isCancelled()) {
+			throw new BusinessException(ReturnCode.CANCELLED, "用户添加被取消", request);
+		}
 		String userName = user.getUsername();
 		String userPassword = user.getPassword();
 		validateUserCredentials(userName, userPassword, request);
@@ -119,18 +127,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 				throw new BusinessException(ReturnCode.PARAMS_ERROR, "手机号格式错误", request);
 			}
 		}
+		UserAddSuccessEvent eventSuccess = new UserAddSuccessEvent(this, event);
+		eventPublisher.publishEvent(eventSuccess);
+		if (eventSuccess.isCancelled()) {
+			throw new BusinessException(ReturnCode.CANCELLED, "用户添加被取消", request);
+		}
 		boolean saveResult = this.save(user);
 		if (!saveResult) {
 			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "添加失败，数据库错误", request);
 		}
 		generateDefaultAvatar(user, request);
-		SecurityLog securityLog = new SecurityLog();
-		securityLog.setUid(user.getUid());
-		securityLog.setTitle(user.getUsername());
-		List<SecurityType> st = List.of(SecurityType.ADD_ACCOUNT);
-		securityLog.setTypesByList(st);
-		securityLog.setIp(NetUtil.getIpAddress(request));
-		securityLogService.save(securityLog);
 		return true;
 	}
 
@@ -154,6 +160,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 	public User userCreate(UserCreateRequest userCreateRequest, HttpServletRequest request) {
 		if (userCreateRequest == null) {
 			throw new BusinessException(ReturnCode.PARAMS_ERROR, "参数为空", request);
+		}
+		UserCreateEvent event = new UserCreateEvent(this, userCreateRequest, request);
+		eventPublisher.publishEvent(event);
+		if (event.isCancelled()) {
+			throw new BusinessException(ReturnCode.CANCELLED, "用户创建被取消", request);
 		}
 		String userName = userCreateRequest.getUsername();
 		String userPassword = userCreateRequest.getPassword();
@@ -197,18 +208,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 			}
 			UserServiceImpl.codeCache.invalidate(phone);
 		}
+		UserAddSuccessEvent eventSuccess = new UserAddSuccessEvent(this, user, request);
+		eventPublisher.publishEvent(eventSuccess);
+		if (eventSuccess.isCancelled()) {
+			throw new BusinessException(ReturnCode.CANCELLED, "用户创建被取消", request);
+		}
 		boolean saveResult = this.save(user);
 		if (!saveResult) {
 			throw new BusinessException(ReturnCode.SYSTEM_ERROR, "添加失败，数据库错误", request);
 		}
 		generateDefaultAvatar(user, request);
-		SecurityLog securityLog = new SecurityLog();
-		securityLog.setUid(user.getUid());
-		securityLog.setTitle(user.getUsername());
-		List<SecurityType> st = List.of(SecurityType.ADD_ACCOUNT);
-		securityLog.setTypesByList(st);
-		securityLog.setIp(NetUtil.getIpAddress(request));
-		securityLogService.save(securityLog);
 		return user;
 	}
 
